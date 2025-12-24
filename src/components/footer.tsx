@@ -8,7 +8,13 @@ const Footer = () => {
             <p className="text-xs text-muted-foreground">
               Powered by{" "}
               <span className="font-medium text-foreground">
-                OpenNext Framework
+                <a href="https://hono.dev" target="_blank" rel="noopener noreferrer">Hono</a>
+              </span>
+              <span className="text-xs text-foreground">
+                {" "}and{" "}
+              </span>
+              <span className="font-medium text-foreground">
+                <a href="https://www.npmjs.com/package/wrangler" target="_blank" rel="noopener noreferrer">wrangler</a>
               </span>{" "}
               and deployed on{" "}
               <span className="font-medium text-foreground">
