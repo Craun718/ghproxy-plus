@@ -152,7 +152,7 @@ export default function Homepage() {
   const onSubmitGetReleases = async (values: CheckFormValues) => {
     setLoading(true);
 
-    if (values.repoUrl.includes("/release")){
+    if (values.repoUrl.includes("/release")) {
       values.repoUrl = values.repoUrl.split("/release")[0];
       checkForm.setValue("repoUrl", values.repoUrl);
     }
