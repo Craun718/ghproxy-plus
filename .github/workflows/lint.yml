@@ -3,29 +3,23 @@ name: Lint
 on:
   push:
     branches: ["**"]
-  pull_request:
-    branches: ["**"]
 
 jobs:
-  markdown-lint:
-    name: Markdown Lint
+  lint-and-fix:
+    name: Lint and Fix
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Markdown lint
+      - name: Markdown lint and fix
         uses: DavidAnson/markdownlint-cli2-action@v20
         with:
           globs: |
             "**/*.md"
-
-  code-lint:
-    name: Code Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          fix: true
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4.1.0
@@ -41,5 +35,10 @@ jobs:
       - name: Install
         run: pnpm install
 
-      - name: Lint
-        run: pnpm biome ci
+      - name: Code Lint and Fix
+        run: pnpm lint:fix
+
+      - name: Commit and Push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: format and lint fix [skip ci]"
