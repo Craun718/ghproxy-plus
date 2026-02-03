@@ -42,8 +42,7 @@ import {
 } from "@/lib/ghApi";
 import type { GhRelease } from "@/lib/ghResponse";
 import { getDownloadAsset } from "@/lib/searchPkg";
-import { extractRepoFromURL } from "@/lib/utils";
-import { resolve_url } from "./lib";
+import { extractRepoFromURL, resolve_url } from "@/lib/utils";
 
 type CheckFormValues = z.infer<typeof CheckFormSchema>;
 
