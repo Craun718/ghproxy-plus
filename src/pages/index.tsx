@@ -43,6 +43,7 @@ import {
 import type { GhRelease } from "@/lib/ghResponse";
 import { getDownloadAsset } from "@/lib/searchPkg";
 import { extractRepoFromURL } from "@/lib/utils";
+import { resolve_url } from "./lib";
 
 type CheckFormValues = z.infer<typeof CheckFormSchema>;
 
@@ -151,11 +152,8 @@ export default function Homepage() {
 
   const onSubmitGetReleases = async (values: CheckFormValues) => {
     setLoading(true);
-
-    if (values.repoUrl.includes("/release")){
-      values.repoUrl = values.repoUrl.split("/release")[0];
-      checkForm.setValue("repoUrl", values.repoUrl);
-    }
+    values.repoUrl = resolve_url(values.repoUrl);
+    checkForm.setValue("repoUrl", values.repoUrl);
 
     const repo = extractRepoFromURL(values.repoUrl);
     if (!repo) {
