@@ -72,4 +72,4 @@ export const resolve_url = (url: string) => {
     url = url.slice(0, -1);
   }
   return url;
-}
+};
