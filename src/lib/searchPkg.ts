@@ -110,7 +110,7 @@ const getKeywords = (
     if (osName.toLowerCase() === "android") {
       keywords.push("android", "armv8", "universal", "apk");
     } else if (osName.toLowerCase() === "windows") {
-      keywords.push("windows", "win32", "win64", "win", "exe", "msi", "zip");
+      keywords.push("windows", "win32", "win64", "win", "exe", "msi");
     } else if (osName.toLowerCase() === "ios") {
       keywords.push("ios", "ipa");
     } else if (osName.toLowerCase() === "macos") {
