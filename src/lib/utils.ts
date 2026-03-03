@@ -71,5 +71,8 @@ export const resolve_url = (url: string) => {
   if (url.endsWith("/")) {
     url = url.slice(0, -1);
   }
+  if (url.endsWith(".git")) {
+    url = url.slice(0, -4);
+  }
   return url;
 };
