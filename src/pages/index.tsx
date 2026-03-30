@@ -412,7 +412,10 @@ export default function Homepage() {
 
       <Drawer>
         <DrawerTrigger asChild>
-          <button type="button" className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors">
+          <button
+            type="button"
+            className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors"
+          >
             View API Documentation
           </button>
         </DrawerTrigger>
