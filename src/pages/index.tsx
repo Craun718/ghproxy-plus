@@ -1,5 +1,5 @@
 "use client";
-import { CheckCircle2Icon } from "lucide-react";
+import { AlertCircle, Download, Link2, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -10,6 +10,13 @@ import type { CheckFormSchema } from "@/components/lib";
 import MarkdownRenderer from "@/components/markdownRenderer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import {
   Drawer,
   DrawerContent,
@@ -274,109 +281,154 @@ export default function Homepage() {
   };
 
   return (
-    <div className="w-[80%] sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl space-y-10">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
       {submitResult && (
-        <Alert variant="destructive">
-          <CheckCircle2Icon />
-          <AlertTitle>Fail to fetch releases</AlertTitle>
+        <Alert variant="destructive" className="animate-in slide-in-from-top-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to fetch releases</AlertTitle>
           <AlertDescription>{submitResult}</AlertDescription>
         </Alert>
       )}
 
-      <Form {...checkForm}>
-        <form
-          onSubmit={checkForm.handleSubmit(onSubmitGetReleases)}
-          className="space-y-4"
-        >
-          <FormField
-            control={checkForm.control}
-            name="repoUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>GitHub repo URL</FormLabel>
-                <div className="flex gap-2">
-                  <FormControl className="flex-1">
-                    <Input
-                      placeholder="https://github.com/username/repo"
-                      {...field}
-                    />
-                  </FormControl>
-                  <Button type="submit" disabled={loading}>
-                    {loading ? "Checking..." : "Check"}
-                  </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </form>
-      </Form>
-
-      <div className="flex flex-col gap-2 space-y-8">
-        <div className="space-y-2">
-          <Label>Tag</Label>
-          <Select value={tag} onValueChange={setTag}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select tag" />
-            </SelectTrigger>
-            <SelectContent>
-              {tagList.map((tag) => (
-                <SelectItem key={tag.releaseId} value={tag.releaseId}>
-                  {tag.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Asset</Label>
-          <Select value={asset} onValueChange={setAsset}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select download asset" />
-            </SelectTrigger>
-            <SelectContent>
-              {assetList.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button
-          onClick={handleDownload}
-          disabled={!asset || asset === "None" || loading}
-        >
-          Download
-        </Button>
-        <Button
-          onClick={handleCopyDownloadUrl}
-          disabled={!asset || asset === "None" || loading}
-        >
-          Generate Download URL
-        </Button>
-
-        <Drawer>
-          <DrawerTrigger>
-            <p className="text-blue-500 underline cursor-pointer">
-              API Documentation
-            </p>
-          </DrawerTrigger>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>API of ghproxy-plus</DrawerTitle>
-            </DrawerHeader>
-            {/* ui shit */}
-            {/* In HTML, <div> cannot be a descendant of <p>. This will cause a hydration error. */}
-            {/* <DrawerDescription> */}
-            <div className="m-5">
-              <MarkdownRenderer content={apiDocumentation} />
+      <Card className="shadow-lg border-border/50">
+        <CardHeader className="pb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary/10 rounded-lg">
+              <Package className="h-6 w-6 text-primary" />
             </div>
-            {/* </DrawerDescription> */}
-            <DrawerFooter></DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-      </div>
+            <div>
+              <CardTitle className="text-2xl">Repository</CardTitle>
+              <CardDescription>
+                Enter a GitHub repository URL to get started
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Form {...checkForm}>
+            <form
+              onSubmit={checkForm.handleSubmit(onSubmitGetReleases)}
+              className="space-y-4"
+            >
+              <FormField
+                control={checkForm.control}
+                name="repoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">
+                      GitHub URL
+                    </FormLabel>
+                    <div className="flex gap-3">
+                      <FormControl className="flex-1">
+                        <Input
+                          placeholder="https://github.com/username/repo"
+                          {...field}
+                          className="h-12 text-base"
+                        />
+                      </FormControl>
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        size="default"
+                        className="h-12 px-8"
+                      >
+                        {loading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Loading
+                          </span>
+                        ) : (
+                          "Check"
+                        )}
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+
+          {tagList.length > 1 && (
+            <div className="space-y-4 pt-4 border-t">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Release Tag</Label>
+                  <Select value={tag} onValueChange={setTag}>
+                    <SelectTrigger className="w-full h-12 text-base">
+                      <SelectValue placeholder="Select a release" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tagList.map((tag) => (
+                        <SelectItem key={tag.releaseId} value={tag.releaseId}>
+                          {tag.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Asset</Label>
+                  <Select value={asset} onValueChange={setAsset}>
+                    <SelectTrigger className="w-full h-12 text-base">
+                      <SelectValue placeholder="Select an asset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assetList.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tagList.length > 1 && (
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleDownload}
+                disabled={!asset || asset === "None" || loading}
+                className="flex-1 h-12 text-base"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                Download
+              </Button>
+              <Button
+                onClick={handleCopyDownloadUrl}
+                disabled={!asset || asset === "None" || loading}
+                variant="outline"
+                className="flex-1 h-12 text-base"
+              >
+                <Link2 className="mr-2 h-5 w-5" />
+                Copy URL
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Drawer>
+        <DrawerTrigger asChild>
+          <button type="button" className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors">
+            View API Documentation
+          </button>
+        </DrawerTrigger>
+        <DrawerContent className="max-h-[80vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              API Documentation
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-5 pb-4 overflow-y-auto max-h-[60vh] select-text">
+            <MarkdownRenderer content={apiDocumentation} />
+          </div>
+          <DrawerFooter />
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
