@@ -1,24 +1,28 @@
 #
 
-## 1. _gh-proxy API_
+## _1. gh-proxy API_
 
-**Endpoint:** `/api/ghproxy/{github-asset-url}`
+**Endpoint:** `/api/ghproxy/{github-url}`
 
 Proxies GitHub resources with CORS headers, allowing accelerated access to GitHub files, releases, and repositories.
 
 ---
 
-## 2. _Smart Download API_
+## _2. Smart Download API_
 
 **Endpoint:** `/api/download/{github-repo-url}`
-
-**Don't fetch it! You can only access it through the browser.**
 
 Automatically detects the user's operating system and architecture from the User-Agent header and downloads the most appropriate release asset from the latest release.
 
 **Parameters:**
 
 - `keyword` (optional): Additional keyword to filter assets
+
+**Example:**
+
+~~curl -L https://[host]/api/download/github.com/owner/repo~~
+
+Don't fetch it! You can only access it through the browser.
 
 **Detection Logic:**
 
@@ -29,7 +33,7 @@ Automatically detects the user's operating system and architecture from the User
 
 ---
 
-## 3. _Health Check API_
+### _3. Health Check API_
 
 **Endpoint:** `/api/ping`
 
