@@ -21,7 +21,7 @@ const styles = {
   hr: "border-border my-6",
   code: "font-mono text-sm bg-muted text-foreground px-1.5 py-0.5 rounded",
   pre: "bg-muted rounded-lg p-4 overflow-x-auto mb-4",
-  blockquote: "border-l-4 border-primary pl-4 italic text-muted-foreground my-4",
+  blockquote: "border-l-4 border-primary pl-4 italic text-muted-foreground my-4"
 };
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
@@ -36,24 +36,35 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         ul: ({ children }) => <ul className={styles.ul}>{children}</ul>,
         ol: ({ children }) => <ol className={styles.ol}>{children}</ol>,
         li: ({ children }) => <li className={styles.li}>{children}</li>,
-        strong: ({ children }) => <strong className={styles.strong}>{children}</strong>,
+        strong: ({ children }) => (
+          <strong className={styles.strong}>{children}</strong>
+        ),
         em: ({ children }) => <em className={styles.em}>{children}</em>,
         del: ({ children }) => <del className={styles.del}>{children}</del>,
         hr: () => <hr className={styles.hr} />,
         code: ({ className, children, ...props }) => {
           const isInline = !className?.includes("language-");
           if (isInline) {
-            return <code className={styles.code} {...props}>{children}</code>;
+            return (
+              <code className={styles.code} {...props}>
+                {children}
+              </code>
+            );
           }
           return (
             <pre className={styles.pre}>
-              <code className={cn("font-mono text-sm text-foreground", className)} {...props}>
+              <code
+                className={cn("font-mono text-sm text-foreground", className)}
+                {...props}
+              >
                 {children}
               </code>
             </pre>
           );
         },
-        blockquote: ({ children }) => <blockquote className={styles.blockquote}>{children}</blockquote>,
+        blockquote: ({ children }) => (
+          <blockquote className={styles.blockquote}>{children}</blockquote>
+        )
       }}
     >
       {content}
