@@ -389,14 +389,6 @@ export default function Homepage() {
           {tagList.length > 1 && (
             <div className="flex gap-3 pt-4">
               <Button
-                onClick={handleDownload}
-                disabled={!asset || asset === "None" || loading}
-                className="flex-1 h-12 text-base"
-              >
-                <Download className="mr-2 h-5 w-5" />
-                Download
-              </Button>
-              <Button
                 onClick={handleCopyDownloadUrl}
                 disabled={!asset || asset === "None" || loading}
                 variant="outline"
@@ -404,6 +396,14 @@ export default function Homepage() {
               >
                 <Link2 className="mr-2 h-5 w-5" />
                 Copy URL
+              </Button>
+              <Button
+                onClick={handleDownload}
+                disabled={!asset || asset === "None" || loading}
+                className="flex-1 h-12 text-base"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                Download
               </Button>
             </div>
           )}
