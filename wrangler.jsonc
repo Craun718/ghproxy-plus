@@ -3,9 +3,7 @@
   "name": "ghproxy-plus-backend",
   "main": "src/api.ts",
   "compatibility_date": "2025-09-17",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
