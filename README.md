@@ -10,7 +10,7 @@ This project is built with **React**, **Hono**, **Tailwind CSS**, and **shadcn/u
 
 ### Cloudflare Workers (Recommended)
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://codeberg.org/natsuu/ghproxy-plus.git)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Craun718/ghproxy-plus.git)
 
 Or deploy manually with wrangler:
 
