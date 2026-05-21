@@ -71,16 +71,6 @@
     "vaul": "^1.1.2",
     "zod": "^4.1.12"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@tailwindcss/oxide",
-      "core-js",
-      "esbuild",
-      "msw",
-      "sharp",
-      "workerd"
-    ]
-  },
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
     "@farmfe/cli": "^1.0.4",
