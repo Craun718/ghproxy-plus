@@ -1,5 +1,10 @@
 "use client";
-import { Cloud, Code2, Paintbrush } from "lucide-react";
+
+import {
+  IconBrandCloudflare,
+  IconBrandTailwind,
+  IconFlame
+} from "@tabler/icons-react";
 
 const Footer = () => {
   return (
@@ -8,7 +13,7 @@ const Footer = () => {
         <div className="flex flex-col items-center gap-3">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Code2 className="h-3 w-3" />
+              <IconFlame stroke={1} />
               <a
                 href="https://hono.dev"
                 target="_blank"
@@ -20,7 +25,7 @@ const Footer = () => {
             </span>
             <span>+</span>
             <span className="flex items-center gap-1">
-              <Paintbrush className="h-3 w-3" />
+              <IconBrandTailwind stroke={1} />
               <a
                 href="https://tailwindcss.com"
                 target="_blank"
@@ -34,7 +39,7 @@ const Footer = () => {
             <span>shadcn/ui</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Cloud className="h-3 w-3" />
+            <IconBrandCloudflare stroke={1} />
             <span>Deployed on Cloudflare Workers</span>
           </div>
           <p className="text-xs text-muted-foreground/70">

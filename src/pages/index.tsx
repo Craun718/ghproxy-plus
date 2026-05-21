@@ -1,5 +1,10 @@
 "use client";
-import { AlertCircle, Download, Link2, Package } from "lucide-react";
+import {
+  IconAlertCircle,
+  IconDownload,
+  IconLink,
+  IconPackage
+} from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -285,7 +290,7 @@ export default function Homepage() {
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {submitResult && (
         <Alert variant="destructive" className="animate-in slide-in-from-top-2">
-          <AlertCircle className="h-4 w-4" />
+          <IconAlertCircle stroke={1} />
           <AlertTitle>Failed to fetch releases</AlertTitle>
           <AlertDescription>{submitResult}</AlertDescription>
         </Alert>
@@ -295,7 +300,7 @@ export default function Homepage() {
         <CardHeader className="pb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary/10 rounded-lg">
-              <Package className="h-6 w-6 text-primary" />
+              <IconPackage stroke={1} />
             </div>
             <div>
               <CardTitle className="text-2xl">Repository</CardTitle>
@@ -395,7 +400,7 @@ export default function Homepage() {
                 variant="outline"
                 className="flex-1 h-12 text-base"
               >
-                <Link2 className="mr-2 h-5 w-5" />
+                <IconLink stroke={1} />
                 Copy URL
               </Button>
               <Button
@@ -403,8 +408,7 @@ export default function Homepage() {
                 disabled={!asset || asset === "None" || loading}
                 className="flex-1 h-12 text-base"
               >
-                <Download className="mr-2 h-5 w-5" />
-                Download
+                <IconDownload stroke={1} /> Download
               </Button>
             </div>
           )}
@@ -423,7 +427,7 @@ export default function Homepage() {
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5" />
+              <IconLink stroke={1} />
               API Documentation
             </DrawerTitle>
           </DrawerHeader>

@@ -1,5 +1,5 @@
 "use client";
-import { Download, Github } from "lucide-react";
+import { IconBrandGithub } from "@tabler/icons-react";
 
 const Header = () => {
   return (
@@ -24,7 +24,7 @@ const Header = () => {
           className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 hover:scale-110"
           aria-label="View on GitHub"
         >
-          <Github className="w-5 h-5" />
+          <IconBrandGithub stroke={1} />
         </a>
       </div>
     </header>
