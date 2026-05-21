@@ -35,42 +35,15 @@ Clone the Repository
 ```bash
 git clone https://github.com/your-username/ghproxy-plus.git
 cd ghproxy-plus
-```
 
-Install Dependencies
-
-```bash
-npm install
-# or
-yarn install
-# or
+# Install Dependencies
 pnpm install
-# or
-bun install
-```
 
-Build the Project
-
-```bash
-npm build
-# or
-yarn build
-# or
+# Build the Project
 pnpm build
-# or
-bun build
-```
 
-Start the Server
-
-```bash
-npm start
-# or
-yarn start
-# or
+# Start the Server
 pnpm start
-# or
-bun start
 ```
 
 ## API Manual

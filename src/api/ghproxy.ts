@@ -133,6 +133,9 @@ function httpHandler(req: HonoRequest, pathname: string) {
   try {
     const urlObj = new URL(urlStr);
 
+    // Extract original filename from the GitHub URL (before CDN redirect)
+    const originalFilename = urlObj.pathname.split("/").pop();
+
     // 根据Content-Type获取请求体
     let body: Promise<string> | null = null;
     if (req.header("content-type")) {
@@ -146,13 +149,13 @@ function httpHandler(req: HonoRequest, pathname: string) {
       body: body
     } as RequestInit;
 
-    return proxy(urlObj, reqInit);
+    return proxy(urlObj, reqInit, originalFilename);
   } catch {
     return new Response("bad url", { status: 400 });
   }
 }
 
-async function proxy(urlObj: URL, reqInit: RequestInit) {
+async function proxy(urlObj: URL, reqInit: RequestInit, originalFilename?: string) {
   let res: Response;
   try {
     res = await fetch(urlObj.href, reqInit);
@@ -175,17 +178,17 @@ async function proxy(urlObj: URL, reqInit: RequestInit) {
         const u = new URL(_location);
         if (u) {
           reqInit.redirect = "follow";
-          return proxy(u, reqInit);
+          return proxy(u, reqInit, originalFilename);
         }
       }
     }
   }
-  // Force browser download for file URLs
-  const filename = urlObj.pathname.split("/").pop();
-  if (filename) {
+
+  // Force browser download, using the original GitHub filename (not CDN filename)
+  if (originalFilename) {
     resHdrNew.set(
       "content-disposition",
-      `attachment; filename="${encodeURIComponent(filename)}"`
+      `attachment; filename="${originalFilename}"`
     );
   }
 
