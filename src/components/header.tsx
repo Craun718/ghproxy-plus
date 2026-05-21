@@ -18,7 +18,7 @@ const Header = () => {
         </div>
 
         <a
-          href="https://codeberg.org/natsuu/ghproxy-plus"
+          href="https://github.com/Craun718/ghproxy-plus"
           target="_blank"
           rel="noopener noreferrer"
           className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 hover:scale-110"
