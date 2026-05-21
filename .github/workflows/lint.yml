@@ -21,10 +21,8 @@ jobs:
             "**/*.md"
           fix: true
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: latest
+      - name: Install pnpm via corepack
+        run: corepack enable && corepack install
 
       - name: Set node LTS
         uses: actions/setup-node@v4
@@ -33,7 +31,7 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Code Lint and Fix
         run: pnpm lint:fix
