@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: biome-check
+        name: Biome Check
+        entry: npx biome check --write
+        language: system
+        types: [text]
+        files: \.(js|jsx|ts|tsx|json|css|md)$
