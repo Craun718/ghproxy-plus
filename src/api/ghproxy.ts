@@ -180,6 +180,15 @@ async function proxy(urlObj: URL, reqInit: RequestInit) {
       }
     }
   }
+  // Force browser download for file URLs
+  const filename = urlObj.pathname.split("/").pop();
+  if (filename) {
+    resHdrNew.set(
+      "content-disposition",
+      `attachment; filename="${encodeURIComponent(filename)}"`
+    );
+  }
+
   resHdrNew.set("access-control-expose-headers", "*");
   resHdrNew.set("access-control-allow-origin", "*");
 
