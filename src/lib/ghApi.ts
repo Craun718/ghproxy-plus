@@ -179,10 +179,10 @@ const getDefaultBranchSourceCode = (
 };
 
 export {
-  getRepoTags,
-  getRepoReleases,
+  getDefaultBranchSourceCode,
   getLatestRelease,
-  getSourceCode,
   getRepoInfo,
-  getDefaultBranchSourceCode
+  getRepoReleases,
+  getRepoTags,
+  getSourceCode
 };

@@ -155,7 +155,11 @@ function httpHandler(req: HonoRequest, pathname: string) {
   }
 }
 
-async function proxy(urlObj: URL, reqInit: RequestInit, originalFilename?: string) {
+async function proxy(
+  urlObj: URL,
+  reqInit: RequestInit,
+  originalFilename?: string
+) {
   let res: Response;
   try {
     res = await fetch(urlObj.href, reqInit);
