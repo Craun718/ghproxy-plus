@@ -3,7 +3,8 @@
 import {
   IconBrandCloudflare,
   IconBrandTailwind,
-  IconFlame
+  IconFlame,
+  IconWashDryShade
 } from "@tabler/icons-react";
 
 const Footer = () => {
@@ -36,7 +37,17 @@ const Footer = () => {
               </a>
             </span>
             <span>+</span>
-            <span>shadcn/ui</span>
+            <span className="flex items-center gap-1">
+              <IconWashDryShade stroke={2} />
+              <a
+                href="https://ui.shadcn.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors"
+              >
+                shadcn/ui
+              </a>
+            </span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <IconBrandCloudflare stroke={2} />
