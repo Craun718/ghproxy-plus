@@ -290,7 +290,7 @@ export default function Homepage() {
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {submitResult && (
         <Alert variant="destructive" className="animate-in slide-in-from-top-2">
-          <IconAlertCircle stroke={1} />
+          <IconAlertCircle stroke={2} />
           <AlertTitle>Failed to fetch releases</AlertTitle>
           <AlertDescription>{submitResult}</AlertDescription>
         </Alert>
@@ -300,7 +300,7 @@ export default function Homepage() {
         <CardHeader className="pb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary/10 rounded-lg">
-              <IconPackage stroke={1} />
+              <IconPackage stroke={2} />
             </div>
             <div>
               <CardTitle className="text-2xl">Repository</CardTitle>
@@ -400,7 +400,7 @@ export default function Homepage() {
                 variant="outline"
                 className="flex-1 h-12 text-base"
               >
-                <IconLink stroke={1} />
+                <IconLink stroke={2} />
                 Copy URL
               </Button>
               <Button
@@ -408,7 +408,7 @@ export default function Homepage() {
                 disabled={!asset || asset === "None" || loading}
                 className="flex-1 h-12 text-base"
               >
-                <IconDownload stroke={1} /> Download
+                <IconDownload stroke={2} /> Download
               </Button>
             </div>
           )}
@@ -427,7 +427,7 @@ export default function Homepage() {
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2">
-              <IconLink stroke={1} />
+              <IconLink stroke={2} />
               API Documentation
             </DrawerTitle>
           </DrawerHeader>

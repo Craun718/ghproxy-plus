@@ -13,7 +13,7 @@ const Footer = () => {
         <div className="flex flex-col items-center gap-3">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <IconFlame stroke={1} />
+              <IconFlame stroke={2} />
               <a
                 href="https://hono.dev"
                 target="_blank"
@@ -25,7 +25,7 @@ const Footer = () => {
             </span>
             <span>+</span>
             <span className="flex items-center gap-1">
-              <IconBrandTailwind stroke={1} />
+              <IconBrandTailwind stroke={2} />
               <a
                 href="https://tailwindcss.com"
                 target="_blank"
@@ -39,7 +39,7 @@ const Footer = () => {
             <span>shadcn/ui</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <IconBrandCloudflare stroke={1} />
+            <IconBrandCloudflare stroke={2} />
             <span>Deployed on Cloudflare Workers</span>
           </div>
           <p className="text-xs text-muted-foreground/70">

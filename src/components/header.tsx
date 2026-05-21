@@ -24,7 +24,7 @@ const Header = () => {
           className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 hover:scale-110"
           aria-label="View on GitHub"
         >
-          <IconBrandGithub stroke={1} />
+          <IconBrandGithub stroke={2} />
         </a>
       </div>
     </header>
