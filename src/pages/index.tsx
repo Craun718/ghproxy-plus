@@ -5,6 +5,7 @@ import {
   IconLink,
   IconPackage
 } from "@tabler/icons-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -22,6 +23,14 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@/components/ui/command";
 import {
   Drawer,
   DrawerContent,
@@ -41,12 +50,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
 import {
   getDefaultBranchSourceCode,
   getRepoInfo,
@@ -54,7 +61,7 @@ import {
 } from "@/lib/ghApi";
 import type { GhRelease } from "@/lib/ghResponse";
 import { getDownloadAsset } from "@/lib/searchPkg";
-import { extractRepoFromURL, resolve_url } from "@/lib/utils";
+import { cn, extractRepoFromURL, resolve_url } from "@/lib/utils";
 
 type CheckFormValues = z.infer<typeof CheckFormSchema>;
 
@@ -75,6 +82,8 @@ export default function Homepage() {
   const [assetList, setAssetList] = useState([
     { label: "None", value: "None" }
   ]);
+  const [assetOpen, setAssetOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
 
   const checkForm = useForm<CheckFormValues>({
     // don't use resolver here to avoid packup error
@@ -137,22 +146,6 @@ export default function Homepage() {
     }
   }, [tag, releases, ua, keyword]);
 
-  useEffect(() => {
-    if (tag && tag !== "None" && tag !== "" && releases.length > 0) {
-      const release = releases.find((release) => release.id.toString() === tag);
-      if (release && release.assets.length > 0) {
-        const downloadAsset = getDownloadAsset(release.assets, ua, keyword);
-        if (downloadAsset) {
-          setAsset(downloadAsset.browser_download_url);
-          console.debug(
-            "Auto-selected asset based on keyword:",
-            downloadAsset.name
-          );
-        }
-      }
-    }
-  }, [keyword, ua, tag, releases]);
-
   const resetAssetAndTag = () => {
     setTag("");
     setAsset("");
@@ -189,7 +182,7 @@ export default function Homepage() {
         releaseId: release.id.toString()
       }));
       tagNames[0].label += " (latest)";
-      setTagList(tagNames.slice(0, 5)); // Show only first 5 tags
+      setTagList(tagNames);
       setTag(tagNames[0].releaseId);
       setReleases(releases);
       updateSearchParams("repo", values.repoUrl);
@@ -232,7 +225,7 @@ export default function Homepage() {
           releaseId: release.id.toString()
         }));
         tagNames[0].label += " (latest)";
-        setTagList(tagNames.slice(0, 5)); // Show only first 5 tags
+        setTagList(tagNames);
         setTag(tagNames[0].releaseId);
         setReleases(releases);
         updateSearchParams("repo", values.repoUrl);
@@ -355,44 +348,116 @@ export default function Homepage() {
             </form>
           </Form>
 
-          {tagList.length > 1 && (
+          {releases.length > 0 && (
             <div className="space-y-4 pt-4 border-t">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-base font-medium">Release Tag</Label>
-                  <Select value={tag} onValueChange={setTag}>
-                    <SelectTrigger className="w-full h-12 text-base">
-                      <SelectValue placeholder="Select a release" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tagList.map((tag) => (
-                        <SelectItem key={tag.releaseId} value={tag.releaseId}>
-                          {tag.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={tagOpen} onOpenChange={setTagOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={tagOpen}
+                        className="w-full h-12 text-base justify-between font-normal"
+                      >
+                        {tagList.find((item) => item.releaseId === tag)
+                          ?.label ?? "Select a release"}
+                        <ChevronDownIcon className="size-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Filter releases..." />
+                        <CommandList>
+                          <CommandEmpty>No release found.</CommandEmpty>
+                          <CommandGroup>
+                            {tagList.map((item) => (
+                              <CommandItem
+                                key={item.releaseId}
+                                value={item.label}
+                                onSelect={() => {
+                                  setTag(item.releaseId);
+                                  setTagOpen(false);
+                                }}
+                              >
+                                {item.label}
+                                <CheckIcon
+                                  className={cn(
+                                    "ml-auto size-4",
+                                    tag === item.releaseId
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-base font-medium">Asset</Label>
-                  <Select value={asset} onValueChange={setAsset}>
-                    <SelectTrigger className="w-full h-12 text-base">
-                      <SelectValue placeholder="Select an asset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assetList.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={assetOpen} onOpenChange={setAssetOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={assetOpen}
+                        className="w-full h-12 text-base justify-between font-normal"
+                      >
+                        {assetList.find((item) => item.value === asset)
+                          ?.label ?? "Select an asset"}
+                        <ChevronDownIcon className="size-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Filter assets..." />
+                        <CommandList>
+                          <CommandEmpty>No asset found.</CommandEmpty>
+                          <CommandGroup>
+                            {assetList.map((item) => (
+                              <CommandItem
+                                key={item.value}
+                                value={item.label}
+                                onSelect={() => {
+                                  setAsset(item.value);
+                                  setAssetOpen(false);
+                                }}
+                              >
+                                {item.label}
+                                <CheckIcon
+                                  className={cn(
+                                    "ml-auto size-4",
+                                    asset === item.value
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </div>
           )}
 
-          {tagList.length > 1 && (
+          {releases.length > 0 && (
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={handleCopyDownloadUrl}
