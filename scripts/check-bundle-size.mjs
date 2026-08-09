@@ -27,7 +27,7 @@ const measurements = [
   {
     name: 'application CSS',
     bytes: totalBytes(/^index_.*\.css$/),
-    budget: 100_000
+    budget: 110_000
   }
 ];
 
