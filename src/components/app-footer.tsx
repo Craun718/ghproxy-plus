@@ -6,7 +6,7 @@ export function AppFooter() {
         <p>
           © {new Date().getFullYear()}{' '}
           <a
-            href="https://github.com/NtskwK/ghproxy-plus"
+            href="https://github.com/Craun718/ghproxy-plus"
             target="_blank"
             rel="noreferrer"
             className="underline decoration-border underline-offset-4 hover:text-foreground"

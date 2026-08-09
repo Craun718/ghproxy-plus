@@ -32,7 +32,7 @@ export function AppHeader() {
             API Docs
           </NavLink>
           <a
-            href="https://github.com/NtskwK/ghproxy-plus"
+            href="https://github.com/Craun718/ghproxy-plus"
             target="_blank"
             rel="noreferrer"
             className="inline-flex size-11 items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"

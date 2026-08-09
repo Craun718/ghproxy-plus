@@ -4,6 +4,8 @@ ghproxy-plus finds a suitable GitHub Release asset for the current device and
 downloads it through a self-hosted GitHub proxy. It also keeps the low-level
 proxy and smart-download APIs available for direct use.
 
+Canonical repository: [Craun718/ghproxy-plus](https://github.com/Craun718/ghproxy-plus)
+
 The frontend is a React 19 + Farm SPA. Its component layer uses shadcn/ui Luma
 components generated on Base UI primitives, Tailwind CSS, and the existing
 light/dark OKLCH palette. Shared repository state lives in a Zustand model and
@@ -123,6 +125,8 @@ GET /api/ping
 ```
 
 ## Deployment
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Craun718/ghproxy-plus.git)
 
 Deploy the Worker and `dist/` assets using Wrangler:
 
