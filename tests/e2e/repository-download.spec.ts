@@ -84,6 +84,37 @@ const repositoryResponse = {
   ]
 };
 
+function createLargeRepositoryResponse() {
+  return {
+    ...repositoryResponse,
+    releases: Array.from({ length: 36 }, (_, releaseIndex) => {
+      const version = 36 - releaseIndex;
+      return {
+        id: `release-${version}`,
+        name: version === 17 ? 'Nightly Search Target' : `Version ${version}`,
+        tagName: `v${version}.0.0`,
+        publishedAt: '2026-08-01T00:00:00Z',
+        prerelease: false,
+        assets: Array.from({ length: 28 }, (_, assetIndex) => ({
+          id: `asset-${version}-${assetIndex}`,
+          name:
+            assetIndex === 23
+              ? `tool-v${version}-linux-arm64-search-target.tar.gz`
+              : `tool-v${version}-windows-x64-${assetIndex}.zip`,
+          downloadUrl: `https://github.com/owner/repo/releases/download/v${version}.0.0/tool-${assetIndex}.zip`,
+          size: 1048576 + assetIndex,
+          downloadCount: assetIndex * 10,
+          contentType: 'application/octet-stream',
+          kind: 'binary',
+          format: assetIndex === 23 ? 'tar.gz' : 'zip',
+          platform: assetIndex === 23 ? 'linux' : 'windows',
+          architecture: assetIndex === 23 ? 'arm64' : 'x64'
+        }))
+      };
+    })
+  };
+}
+
 async function mockRepositoryApi(page: Page) {
   await page.route('**/api/repos/**', (route) =>
     route.fulfill({
@@ -92,6 +123,18 @@ async function mockRepositoryApi(page: Page) {
       body: JSON.stringify(repositoryResponse)
     })
   );
+}
+
+async function ensureAdvancedSelectionOpen(page: Page) {
+  const trigger = page.getByRole('button', {
+    name: 'Choose another release or file'
+  });
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
+    await trigger.click();
+  }
+  await expect(
+    page.getByRole('combobox', { name: 'Release', exact: true })
+  ).toBeVisible({ timeout: 20_000 });
 }
 
 async function expectInlineAddonPlacement(
@@ -215,6 +258,7 @@ test('keeps GitHub authentication optional and sends it in a header', async ({
 test('queries, switches assets, copies and restores URL state', async ({
   page
 }) => {
+  test.setTimeout(60_000);
   await observeWebVitals(page);
   await page.goto('/');
   await page.getByLabel('GitHub repository').fill('owner/repo');
@@ -225,10 +269,13 @@ test('queries, switches assets, copies and restores URL state', async ({
   await expect(page).toHaveURL(/repo=owner%2Frepo/);
   await expect(page).toHaveURL(/release=v2\.0\.0/);
 
-  await page
-    .getByRole('button', { name: 'Choose another release or file' })
-    .click();
-  await page.getByRole('button', { name: /SourceCode-v2\.0\.0\.zip/ }).click();
+  await ensureAdvancedSelectionOpen(page);
+  const assetInput = page.getByRole('combobox', {
+    name: 'Asset',
+    exact: true
+  });
+  await assetInput.fill('SourceCode-v2.0.0.zip');
+  await page.getByRole('option', { name: /SourceCode-v2\.0\.0\.zip/ }).click();
 
   await expect(page.getByText('Manual selection')).toBeVisible();
   await expect(page).toHaveURL(/asset=asset-source/);
@@ -267,7 +314,7 @@ test('starts the selected proxy download', async ({ page }) => {
     route.fulfill({
       status: 200,
       headers: {
-        'content-disposition': 'attachment; filename="app-download.zip"',
+        'content-disposition': `attachment; filename="app-download.zip"; filename*=UTF-8''app-%E6%B5%8B%E8%AF%95.zip`,
         'content-type': 'application/zip'
       },
       body: 'test download'
@@ -280,7 +327,87 @@ test('starts the selected proxy download', async ({ page }) => {
   await page.getByRole('button', { name: 'Download' }).click();
   const download = await downloadPromise;
 
-  expect(download.suggestedFilename()).toBe('app-download.zip');
+  expect(download.suggestedFilename()).toBe('app-测试.zip');
+});
+
+test('filters large release and asset collections without leaking search state', async ({
+  page
+}) => {
+  await page.unroute('**/api/repos/**');
+  await page.route('**/api/repos/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(createLargeRepositoryResponse())
+    })
+  );
+  await page.goto('/?repo=owner%2Frepo');
+  await ensureAdvancedSelectionOpen(page);
+
+  const releaseInput = page.getByRole('combobox', {
+    name: 'Release',
+    exact: true
+  });
+  await releaseInput.fill('Nightly Search Target');
+  await expect(
+    page.getByRole('option', { name: /Nightly Search Target/ })
+  ).toBeVisible();
+  await releaseInput.press('Enter');
+  await expect(page).toHaveURL(/release=v17\.0\.0/);
+
+  const assetInput = page.getByRole('combobox', {
+    name: 'Asset',
+    exact: true
+  });
+  await assetInput.fill('linux-arm64-search-target');
+  await expect(
+    page.getByRole('option', { name: /linux-arm64-search-target/ })
+  ).toBeVisible();
+  await assetInput.press('Enter');
+  await expect(page).toHaveURL(/asset=asset-17-23/);
+  expect(page.url()).not.toContain('search');
+
+  const selectedUrl = page.url();
+  await assetInput.fill('no-matching-asset');
+  await expect(page.getByText('No assets match your search.')).toBeVisible();
+  expect(page.url()).toBe(selectedUrl);
+});
+
+test('keeps both combobox popups within a 320px viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.unroute('**/api/repos/**');
+  await page.route('**/api/repos/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(createLargeRepositoryResponse())
+    })
+  );
+  await page.goto('/?repo=owner%2Frepo');
+  await ensureAdvancedSelectionOpen(page);
+
+  for (const input of [
+    page.getByRole('combobox', { name: 'Release', exact: true }),
+    page.getByRole('combobox', { name: 'Asset', exact: true })
+  ]) {
+    await input.click();
+    const popup = page.locator('[data-slot="combobox-content"][data-open]');
+    await expect(popup).toBeVisible();
+    const box = await popup.boundingBox();
+    if (!box) throw new Error('Combobox popup must have a layout box.');
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-slot="combobox-content"]')).toHaveCount(0);
+  }
+
+  const accessibilityResults = await new AxeBuilder({ page }).analyze();
+  expect(accessibilityResults.violations).toEqual([]);
 });
 
 test('has no horizontal overflow at target breakpoints', async ({ page }) => {
@@ -340,7 +467,30 @@ test('supports the core keyboard path', async ({ page }) => {
   await advancedTrigger.focus();
   await page.keyboard.press('Enter');
 
-  await expect(page.getByLabel('Release')).toBeVisible();
+  const releaseInput = page.getByRole('combobox', {
+    name: 'Release',
+    exact: true
+  });
+  await expect(releaseInput).toBeVisible();
+  await releaseInput.focus();
+  await releaseInput.press('ControlOrMeta+A');
+  await page.keyboard.type('v1.0.0');
+  await expect(page.getByRole('option', { name: /Version 1/ })).toBeVisible();
+  await releaseInput.press('Enter');
+  await expect(page).toHaveURL(/release=v1\.0\.0/);
+
+  const assetInput = page.getByRole('combobox', {
+    name: 'Asset',
+    exact: true
+  });
+  await assetInput.focus();
+  await assetInput.press('ControlOrMeta+A');
+  await page.keyboard.type('windows-x64-v1');
+  await expect(
+    page.getByRole('option', { name: /app-windows-x64-v1\.zip/ })
+  ).toBeVisible();
+  await assetInput.press('Enter');
+  await expect(page).toHaveURL(/asset=asset-legacy/);
 });
 
 test('loads API Markdown only on the lazy docs route', async ({ page }) => {

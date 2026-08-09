@@ -1,9 +1,7 @@
 import { ChevronDown, CircleAlert, Info, PackageSearch } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { AssetList } from '@/components/repository-download/asset-list';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { LoadingResult } from '@/components/repository-download/loading-result';
 import { RecommendedAsset } from '@/components/repository-download/recommended-asset';
-import { ReleasePicker } from '@/components/repository-download/release-picker';
 import { RepositorySearchForm } from '@/components/repository-download/repository-search-form';
 import { RepositorySummary } from '@/components/repository-download/repository-summary';
 import { buttonVariants } from '@/components/ui/button';
@@ -28,6 +26,10 @@ import {
   useRepositoryDownloadModel
 } from '@/models/repository-download-model';
 import type { RepositoryErrorCode } from '@/models/repository-download-types';
+
+const loadAdvancedSelection = () =>
+  import('@/components/repository-download/advanced-selection');
+const AdvancedSelection = lazy(loadAdvancedSelection);
 
 const errorTitles: Record<RepositoryErrorCode, string> = {
   invalid: 'Check the repository address',
@@ -90,6 +92,10 @@ export default function HomePage() {
       assetId: selectedAssetId
     });
   }, [currentRelease?.tagName, repository, replaceUrlState, selectedAssetId]);
+
+  useEffect(() => {
+    if (repository) void loadAdvancedSelection();
+  }, [repository]);
 
   useEffect(() => {
     if (status === 'ready' && !selectedAssetId) setAdvancedOpen(true);
@@ -246,19 +252,28 @@ export default function HomePage() {
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 rounded-4xl bg-card p-4 shadow-md ring-1 ring-foreground/5 dark:ring-foreground/10 sm:p-6">
-            <div className="space-y-6">
-              <ReleasePicker
-                releases={releases}
-                selectedReleaseId={selectedReleaseId}
-                onSelect={selectRelease}
-              />
-              <AssetList
-                assets={currentRelease.assets}
-                selectedAssetId={selectedAssetId}
-                recommendedAssetId={recommendation?.assetId ?? null}
-                onSelect={selectAsset}
-              />
-            </div>
+            {advancedOpen ? (
+              <Suspense
+                fallback={
+                  <output
+                    className="block py-6 text-center text-sm text-muted-foreground"
+                    aria-live="polite"
+                  >
+                    Loading release and asset selectors…
+                  </output>
+                }
+              >
+                <AdvancedSelection
+                  releases={releases}
+                  currentRelease={currentRelease}
+                  selectedReleaseId={selectedReleaseId}
+                  selectedAssetId={selectedAssetId}
+                  recommendation={recommendation}
+                  onSelectRelease={selectRelease}
+                  onSelectAsset={selectAsset}
+                />
+              </Suspense>
+            ) : null}
           </CollapsibleContent>
         </Collapsible>
       ) : null}

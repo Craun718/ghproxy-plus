@@ -1,5 +1,5 @@
 import { Download, FileArchive, ShieldCheck } from 'lucide-react';
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Combobox,
@@ -98,17 +98,33 @@ export function AssetList({
       items: assets.filter((asset) => group.kinds.includes(asset.kind))
     }))
     .filter((group) => group.items.length > 0);
+  const [inputValue, setInputValue] = useState(() => selectedAsset?.name ?? '');
+  const selectedLabel = selectedAsset?.name ?? '';
+  const searchQuery = inputValue === selectedLabel ? '' : inputValue;
+  const filteredAssetGroups = assetGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((asset) => matchesAsset(asset, searchQuery))
+    }))
+    .filter((group) => group.items.length > 0);
+
+  useEffect(() => {
+    setInputValue(selectedAsset?.name ?? '');
+  }, [selectedAsset]);
 
   return (
     <div className="space-y-2">
       <Label htmlFor={inputId}>Asset</Label>
       <Combobox
         items={assetGroups}
+        filteredItems={filteredAssetGroups}
         value={selectedAsset}
+        inputValue={inputValue}
+        onInputValueChange={setInputValue}
         itemToStringLabel={(asset) => asset.name}
         itemToStringValue={(asset) => asset.id}
         isItemEqualToValue={(asset, value) => asset.id === value.id}
-        filter={matchesAsset}
+        autoHighlight
         onValueChange={(asset) => {
           if (asset) onSelect(asset.id);
         }}
@@ -117,10 +133,11 @@ export function AssetList({
           id={inputId}
           className="min-h-11 w-full"
           placeholder="Search files, platforms, or architectures"
+          triggerLabel="Open asset options"
         />
         <ComboboxContent className="max-w-[calc(100vw-2rem)]">
           <ComboboxEmpty>No assets match your search.</ComboboxEmpty>
-          <ComboboxList>
+          <ComboboxList aria-label="Asset options">
             {(group: AssetGroup) => (
               <ComboboxGroup
                 key={group.value}
@@ -153,7 +170,7 @@ export function AssetList({
                             </span>
                             {isRecommended ? <Badge>Recommended</Badge> : null}
                           </span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
+                          <span className="mt-1 block text-xs text-foreground/80">
                             {titleCase(asset.platform)} ·{' '}
                             {titleCase(asset.architecture)} ·{' '}
                             {titleCase(asset.format)} ·{' '}

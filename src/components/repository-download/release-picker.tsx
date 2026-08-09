@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Combobox,
@@ -38,17 +38,32 @@ export function ReleasePicker({
   const inputId = useId();
   const selectedRelease =
     releases.find((release) => release.id === selectedReleaseId) ?? null;
+  const [inputValue, setInputValue] = useState(() =>
+    selectedRelease ? getReleaseLabel(selectedRelease) : ''
+  );
+  const selectedLabel = selectedRelease ? getReleaseLabel(selectedRelease) : '';
+  const searchQuery = inputValue === selectedLabel ? '' : inputValue;
+  const filteredReleases = releases.filter((release) =>
+    matchesRelease(release, searchQuery)
+  );
+
+  useEffect(() => {
+    setInputValue(selectedRelease ? getReleaseLabel(selectedRelease) : '');
+  }, [selectedRelease]);
 
   return (
     <div className="space-y-2">
       <Label htmlFor={inputId}>Release</Label>
       <Combobox
         items={releases}
+        filteredItems={filteredReleases}
         value={selectedRelease}
+        inputValue={inputValue}
+        onInputValueChange={setInputValue}
         itemToStringLabel={getReleaseLabel}
         itemToStringValue={(release) => release.id}
         isItemEqualToValue={(release, value) => release.id === value.id}
-        filter={matchesRelease}
+        autoHighlight
         onValueChange={(release) => {
           if (release) onSelect(release.id);
         }}
@@ -57,10 +72,11 @@ export function ReleasePicker({
           id={inputId}
           className="min-h-11 w-full"
           placeholder="Search releases by name or tag"
+          triggerLabel="Open release options"
         />
         <ComboboxContent className="max-w-[calc(100vw-2rem)]">
           <ComboboxEmpty>No releases match your search.</ComboboxEmpty>
-          <ComboboxList>
+          <ComboboxList aria-label="Release options">
             {(release: RepositoryRelease) => (
               <ComboboxItem
                 key={release.id}
@@ -72,7 +88,7 @@ export function ReleasePicker({
                     {getReleaseLabel(release)}
                   </span>
                   {getReleaseLabel(release) !== release.tagName ? (
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    <span className="mt-0.5 block truncate text-xs text-foreground/80">
                       {release.tagName}
                     </span>
                   ) : null}
