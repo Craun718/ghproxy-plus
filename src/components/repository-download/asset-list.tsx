@@ -1,7 +1,19 @@
-import { Check, Download, FileArchive, ShieldCheck } from 'lucide-react';
+import { Download, FileArchive, ShieldCheck } from 'lucide-react';
 import { useId } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { cn, formatBytes, titleCase } from '@/lib/utils';
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList
+} from '@/components/ui/combobox';
+import { Label } from '@/components/ui/label';
+import { formatBytes, titleCase } from '@/lib/utils';
 import type {
   AssetKind,
   RepositoryAsset
@@ -14,13 +26,18 @@ interface AssetListProps {
   onSelect: (assetId: string) => void;
 }
 
-interface AssetGroup {
+interface AssetGroupDefinition {
   kinds: AssetKind[];
   title: string;
   description: string;
 }
 
-const groups: AssetGroup[] = [
+interface AssetGroup extends AssetGroupDefinition {
+  value: string;
+  items: RepositoryAsset[];
+}
+
+const groupDefinitions: AssetGroupDefinition[] = [
   {
     kinds: ['binary'],
     title: 'Installers and binaries',
@@ -48,85 +65,117 @@ function AssetIcon({ kind }: { kind: AssetKind }) {
   return <Download className="size-4" aria-hidden="true" />;
 }
 
+function matchesAsset(asset: RepositoryAsset, query: string) {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return true;
+
+  return [
+    asset.name,
+    asset.kind,
+    asset.platform,
+    asset.architecture,
+    asset.format
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase()
+    .includes(normalizedQuery);
+}
+
 export function AssetList({
   assets,
   selectedAssetId,
   recommendedAssetId,
   onSelect
 }: AssetListProps) {
-  const groupIdPrefix = useId();
+  const inputId = useId();
+  const selectedAsset =
+    assets.find((asset) => asset.id === selectedAssetId) ?? null;
+  const assetGroups: AssetGroup[] = groupDefinitions
+    .map((group) => ({
+      ...group,
+      value: group.title,
+      items: assets.filter((asset) => group.kinds.includes(asset.kind))
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
-    <div className="space-y-6">
-      {groups.map((group) => {
-        const groupedAssets = assets.filter((asset) =>
-          group.kinds.includes(asset.kind)
-        );
-        if (groupedAssets.length === 0) return null;
-
-        return (
-          <section
-            key={group.title}
-            aria-labelledby={`${groupIdPrefix}-${group.kinds[0]}`}
-          >
-            <div className="mb-2">
-              <h3
-                id={`${groupIdPrefix}-${group.kinds[0]}`}
-                className="font-medium"
+    <div className="space-y-2">
+      <Label htmlFor={inputId}>Asset</Label>
+      <Combobox
+        items={assetGroups}
+        value={selectedAsset}
+        itemToStringLabel={(asset) => asset.name}
+        itemToStringValue={(asset) => asset.id}
+        isItemEqualToValue={(asset, value) => asset.id === value.id}
+        filter={matchesAsset}
+        onValueChange={(asset) => {
+          if (asset) onSelect(asset.id);
+        }}
+      >
+        <ComboboxInput
+          id={inputId}
+          className="min-h-11 w-full"
+          placeholder="Search files, platforms, or architectures"
+        />
+        <ComboboxContent className="max-w-[calc(100vw-2rem)]">
+          <ComboboxEmpty>No assets match your search.</ComboboxEmpty>
+          <ComboboxList>
+            {(group: AssetGroup) => (
+              <ComboboxGroup
+                key={group.value}
+                items={group.items}
+                className="pb-1.5 last:pb-0"
               >
-                {group.title}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {group.description}
-              </p>
-            </div>
-            <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border">
-              {groupedAssets.map((asset) => {
-                const isSelected = asset.id === selectedAssetId;
-                const isRecommended = asset.id === recommendedAssetId;
-                return (
-                  <button
-                    key={asset.id}
-                    type="button"
-                    onClick={() => onSelect(asset.id)}
-                    aria-pressed={isSelected}
-                    className={cn(
-                      'flex min-h-14 w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/30 sm:items-center',
-                      isSelected && 'bg-secondary/70'
-                    )}
-                  >
-                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground sm:mt-0">
-                      <AssetIcon kind={asset.kind} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="break-all font-medium">
-                          {asset.name}
+                <ComboboxLabel className="space-y-0.5">
+                  <span className="block font-medium text-foreground">
+                    {group.title}
+                  </span>
+                  <span className="block font-normal">{group.description}</span>
+                </ComboboxLabel>
+                <ComboboxCollection>
+                  {(asset: RepositoryAsset) => {
+                    const isRecommended = asset.id === recommendedAssetId;
+
+                    return (
+                      <ComboboxItem
+                        key={asset.id}
+                        value={asset}
+                        className="min-h-14 items-start py-3 sm:items-center"
+                      >
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground sm:mt-0">
+                          <AssetIcon kind={asset.kind} />
                         </span>
-                        {isRecommended ? <Badge>Recommended</Badge> : null}
-                      </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {titleCase(asset.platform)} ·{' '}
-                        {titleCase(asset.architecture)} ·{' '}
-                        {titleCase(asset.format)} · {formatBytes(asset.size)}
-                        {asset.downloadCount !== null
-                          ? ` · ${asset.downloadCount.toLocaleString()} downloads`
-                          : ''}
-                      </span>
-                    </span>
-                    {isSelected ? (
-                      <Check
-                        className="mt-1 size-4 shrink-0 text-primary sm:mt-0"
-                        aria-label="Selected"
-                      />
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="break-all font-medium">
+                              {asset.name}
+                            </span>
+                            {isRecommended ? <Badge>Recommended</Badge> : null}
+                          </span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {titleCase(asset.platform)} ·{' '}
+                            {titleCase(asset.architecture)} ·{' '}
+                            {titleCase(asset.format)} ·{' '}
+                            {formatBytes(asset.size)}
+                            {asset.downloadCount !== null
+                              ? ` · ${asset.downloadCount.toLocaleString()} downloads`
+                              : ''}
+                          </span>
+                        </span>
+                      </ComboboxItem>
+                    );
+                  }}
+                </ComboboxCollection>
+              </ComboboxGroup>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+      <p className="text-xs text-muted-foreground">
+        Search {assets.length} files by name or metadata. Your current selection
+        stays unchanged when there are no matches.
+      </p>
     </div>
   );
 }
