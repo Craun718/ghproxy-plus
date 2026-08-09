@@ -140,6 +140,44 @@ test.beforeEach(async ({ page }) => {
   await mockRepositoryApi(page);
 });
 
+test('uses Semifold as the example and applies product titles', async ({
+  page
+}) => {
+  await page.goto('/');
+
+  await expect(page).toHaveTitle('GitHub Proxy Plus');
+  await expect(page.getByRole('link', { name: 'API Docs' })).toBeVisible();
+  await page.getByRole('button', { name: 'noctisynth/semifold' }).click();
+  await expect(page.getByLabel('GitHub repository')).toHaveValue(
+    'noctisynth/semifold'
+  );
+});
+
+test('keeps GitHub authentication optional and sends it in a header', async ({
+  page
+}) => {
+  await page.goto('/');
+  await expect(page.getByLabel('GitHub token')).toHaveCount(0);
+
+  await page
+    .getByRole('button', { name: 'Optional GitHub authentication' })
+    .click();
+  await page.getByLabel('GitHub token').fill('github_pat_e2e-token');
+  await page.getByLabel('GitHub repository').fill('owner/repo');
+
+  const requestPromise = page.waitForRequest('**/api/repos/**');
+  await page.getByRole('button', { name: 'Find assets' }).click();
+  const request = await requestPromise;
+
+  expect(request.headers()['x-github-token']).toBe('github_pat_e2e-token');
+  expect(request.url()).not.toContain('github_pat_e2e-token');
+  await expect(page).not.toHaveURL(/github_pat_e2e-token/);
+  await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+
+  const accessibilityResults = await new AxeBuilder({ page }).analyze();
+  expect(accessibilityResults.violations).toEqual([]);
+});
+
 test('queries, switches assets, copies and restores URL state', async ({
   page
 }) => {
@@ -213,6 +251,7 @@ test('starts the selected proxy download', async ({ page }) => {
 
 test('has no horizontal overflow at target breakpoints', async ({ page }) => {
   for (const viewport of [
+    { width: 320, height: 720 },
     { width: 390, height: 844 },
     { width: 768, height: 900 },
     { width: 1280, height: 800 },
@@ -221,6 +260,10 @@ test('has no horizontal overflow at target breakpoints', async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto('/?repo=owner%2Frepo');
     await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Optional GitHub authentication' })
+      .click();
+    await expect(page.getByLabel('GitHub token')).toBeVisible();
 
     expect(
       await page.evaluate(

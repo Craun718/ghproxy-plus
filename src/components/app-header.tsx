@@ -29,7 +29,7 @@ export function AppHeader() {
           aria-label="Primary navigation"
         >
           <NavLink to="/docs" className={navLinkClassName}>
-            API docs
+            API Docs
           </NavLink>
           <a
             href="https://github.com/NtskwK/ghproxy-plus"

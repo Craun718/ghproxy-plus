@@ -133,7 +133,7 @@ export function RepositorySearchForm({
               />
               <p
                 id={tokenDescriptionId}
-                className="text-xs leading-relaxed text-muted-foreground"
+                className="text-xs leading-relaxed text-foreground/80"
               >
                 Use a fine-grained token with read-only public repository
                 access. It is sent to this deployment for forwarding to GitHub,

@@ -153,9 +153,9 @@ export default function HomePage() {
           <button
             type="button"
             className="font-medium text-primary underline underline-offset-4"
-            onClick={() => setInput('cli/cli')}
+            onClick={() => setInput('noctisynth/semifold')}
           >
-            cli/cli
+            noctisynth/semifold
           </button>{' '}
           or paste any public GitHub repository URL.
         </div>

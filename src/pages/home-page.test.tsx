@@ -104,6 +104,23 @@ afterEach(() => {
 });
 
 describe('HomePage release states', () => {
+  it('fills the Semifold repository from the idle example', async () => {
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole('button', { name: 'noctisynth/semifold' })
+    );
+
+    expect(screen.getByLabelText('GitHub repository')).toHaveValue(
+      'noctisynth/semifold'
+    );
+  });
+
   it('keeps one release actionable', async () => {
     mockRepositoryResponse(
       createResponse([
