@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；可靠性与产品文案后续任务实施中
+- 状态：当前工作区权威方案（Source of Truth）；可靠性与产品文案后续任务已完成
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -390,7 +390,7 @@ pnpm build
 - 完成 E2E、可访问性、性能预算和发布回归验证。
 - 同步 README、部署说明和最终架构文档。
 
-### P4：查询可靠性与产品文案后续
+### P4：查询可靠性与产品文案后续（已完成）
 
 - P0：实现临时 GitHub Token 的安全传递、无缓存查询、错误反馈和自动展开交互。
 - P1：将首页示例切换为 `noctisynth/semifold`，统一 `API Docs` 文案和
@@ -432,14 +432,20 @@ pnpm build
   URL 通过单一 hook 恢复并 replace 同步 `repo`、`release` 和 `asset`。
 - `/api/repos/:owner/:repo/releases` 统一访问 GitHub、执行内存缓存、默认分支回退、
   数据归一化和稳定错误映射；前端不再直接请求 GitHub API。
+- 仓库查询表单提供折叠的临时 GitHub Token 输入；Token 只存在于页面局部状态并
+  通过同源请求头传递，带 Token 的请求绕过共享缓存、使用 `private, no-store`，
+  无效 Token 映射为 `invalid-token`，限流时自动展开认证区域。
 - `/docs` 使用路由懒加载，Worker 静态资源启用 SPA fallback，主页不加载 API
   Markdown。
+- 首页示例为 `noctisynth/semifold`，顶部导航显示 `API Docs`，浏览器标题为
+  `GitHub Proxy Plus`。
 - `src/globals-css.test.ts` 锁定迁移前全部 light/dark OKLCH 值。为满足 WCAG AA，
   控件只调整现有语义前景 token 的使用方式，没有修改任何原始 OKLCH 数值。
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
   typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
 - 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 100,000 bytes。当前构建分别约为 858.7 KiB、
+  260,000 bytes、应用 CSS 100,000 bytes。当前构建分别约为 861.3 KiB、
   225.5 KiB 和 83.3 KiB。
-- 自动化覆盖 390px、768px、1280px、1440px 断点，桌面和移动核心流程、键盘
-  路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的本地浏览器冒烟预算。
+- 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
+  移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
+  本地浏览器冒烟预算。
