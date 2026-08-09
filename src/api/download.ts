@@ -1,18 +1,20 @@
-import type { Context } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { getRepoReleases } from "@/lib/ghApi";
-import type { GhRelease } from "@/lib/ghResponse";
-import { getDownloadAsset } from "@/lib/searchPkg";
-import { extractRepoFromURL, GHPROXY_PATH, getOSandArch } from "@/lib/utils";
+import type { Context } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { getDownloadAsset } from '@/lib/asset-matcher';
+import { getRepositoryReleases } from '@/lib/github-api';
+import type { GitHubRelease } from '@/lib/github-types';
+import { GHPROXY_PATH } from '@/lib/utils';
+import { parseRepositoryInput } from '@/models/repository-download-schema';
+import type { RepositoryIdentifier } from '@/models/repository-download-types';
 
-const PREFIX = "/api/download/";
+const PREFIX = '/api/download/';
 
 export async function downloadApi(c: Context) {
-  const ua = c.req.header("user-agent") || "";
+  const ua = c.req.header('user-agent') || '';
   const urlObj = new URL(c.req.url);
-  const keyword = urlObj.searchParams.get("keyword") || "";
+  const keyword = urlObj.searchParams.get('keyword') || '';
 
-  let path = urlObj.searchParams.get("q");
+  let path = urlObj.searchParams.get('q');
   if (path) {
     return Response.redirect(`https://${urlObj.host}${PREFIX}${path}`, 301);
   }
@@ -20,18 +22,20 @@ export async function downloadApi(c: Context) {
   // the `//` in path will be merged to `/` by cfworker
   path = urlObj.href
     .slice(urlObj.origin.length + PREFIX.length)
-    .replace(/^https?:\/+/, "https://");
-  if (!path || path.trim() === "") {
-    const message = "Invalid URL.";
+    .replace(/^https?:\/+/, 'https://');
+  if (!path || path.trim() === '') {
+    const message = 'Invalid URL.';
     return c.redirect(
       new URL(`/api/404?message=${encodeURIComponent(message)}`, urlObj.origin),
       302
     );
   }
 
-  const repo = extractRepoFromURL(path);
-  if (!repo) {
-    const message = "Repo not found.";
+  let repository: RepositoryIdentifier;
+  try {
+    repository = parseRepositoryInput(path);
+  } catch {
+    const message = 'Repository not found.';
     return c.redirect(
       new URL(`/api/404?message=${encodeURIComponent(message)}`, urlObj.origin),
       302
@@ -39,29 +43,29 @@ export async function downloadApi(c: Context) {
   }
 
   let body: string | null = null;
-  if (c.req.header("content-type")) {
+  if (c.req.header('content-type')) {
     body = await c.req.text();
   }
 
   const reqInit = {
     method: c.req.method,
     headers: c.req.header(),
-    redirect: "manual",
+    redirect: 'manual',
     body: body
   } as RequestInit;
 
-  let releases: GhRelease[];
+  let releases: GitHubRelease[];
   try {
-    releases = await getRepoReleases(repo.owner, repo.repo, reqInit);
+    releases = await getRepositoryReleases(
+      repository.owner,
+      repository.repo,
+      reqInit
+    );
   } catch (err) {
-    const { os, arch } = getOSandArch(ua);
-
     const { url, status } = err as { url?: string; status?: number };
 
     return c.json(
       {
-        os,
-        arch,
         headersObj: c.req.header(),
         error: err,
         requestUrl: url || null
@@ -71,7 +75,7 @@ export async function downloadApi(c: Context) {
   }
 
   if (!releases || releases.length === 0) {
-    const message = "No releases found.";
+    const message = 'No releases found.';
     return c.redirect(
       new URL(`/api/404?message=${encodeURIComponent(message)}`, urlObj.origin),
       302
@@ -80,7 +84,7 @@ export async function downloadApi(c: Context) {
 
   const asset = getDownloadAsset(releases[0].assets, ua, keyword);
   if (!asset) {
-    const message = "No asset found in release.";
+    const message = 'No matching asset found in release.';
     return c.redirect(
       new URL(`/api/404?message=${encodeURIComponent(message)}`, urlObj.origin),
       302
