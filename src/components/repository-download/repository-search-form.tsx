@@ -1,13 +1,34 @@
-import { ArrowRight, ChevronDown, KeyRound, LoaderCircle } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Github,
+  KeyRound,
+  LoaderCircle
+} from 'lucide-react';
 import { type FormEvent, useEffect, useId, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger
 } from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel
+} from '@/components/ui/field';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput
+} from '@/components/ui/input-group';
 import type { RepositoryDownloadStatus } from '@/models/repository-download-model';
 
 interface RepositorySearchFormProps {
@@ -32,12 +53,14 @@ export function RepositorySearchForm({
   onSubmit
 }: RepositorySearchFormProps) {
   const [tokenOpen, setTokenOpen] = useState(false);
+  const [tokenVisible, setTokenVisible] = useState(false);
   const isBusy = status === 'validating' || status === 'loading';
   const inputId = useId();
   const descriptionId = useId();
   const errorId = useId();
   const tokenId = useId();
-  const tokenDescriptionId = useId();
+  const tokenUsageId = useId();
+  const tokenSecurityId = useId();
 
   useEffect(() => {
     if (promptForToken) setTokenOpen(true);
@@ -50,100 +73,130 @@ export function RepositorySearchForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <div className="space-y-2">
-        <Label htmlFor={inputId}>GitHub repository</Label>
-        <p id={descriptionId} className="text-sm text-muted-foreground">
-          Paste a repository URL, release URL, or enter owner/repo.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Input
-            id={inputId}
-            value={value}
-            onChange={(event) => onValueChange(event.target.value)}
-            placeholder="owner/repository"
-            autoComplete="url"
-            spellCheck="false"
-            aria-describedby={
-              errorMessage ? `${descriptionId} ${errorId}` : descriptionId
-            }
-            aria-invalid={Boolean(errorMessage)}
-            className="h-11 flex-1 px-4"
-          />
-          <Button
-            type="submit"
-            size="lg"
-            disabled={isBusy}
-            className="h-11 min-w-32"
-          >
-            {isBusy ? (
-              <>
-                <LoaderCircle className="animate-spin" aria-hidden="true" />
-                Checking
-              </>
-            ) : (
-              <>
-                Find assets
-                <ArrowRight data-icon="inline-end" aria-hidden="true" />
-              </>
-            )}
-          </Button>
-        </div>
-        {errorMessage ? (
-          <p id={errorId} className="text-sm text-destructive">
-            {errorMessage}
-          </p>
-        ) : null}
+      <FieldGroup className="gap-4">
+        <Field data-invalid={Boolean(errorMessage)}>
+          <FieldContent>
+            <FieldLabel htmlFor={inputId}>GitHub repository</FieldLabel>
+            <FieldDescription id={descriptionId}>
+              Paste a repository URL, release URL, or enter owner/repo.
+            </FieldDescription>
+          </FieldContent>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <InputGroup className="h-11 flex-1">
+              <InputGroupInput
+                id={inputId}
+                value={value}
+                onChange={(event) => onValueChange(event.target.value)}
+                placeholder="owner/repository"
+                autoComplete="url"
+                spellCheck="false"
+                aria-describedby={
+                  errorMessage ? `${descriptionId} ${errorId}` : descriptionId
+                }
+                aria-invalid={Boolean(errorMessage)}
+              />
+              <InputGroupAddon>
+                <Github aria-hidden="true" />
+              </InputGroupAddon>
+            </InputGroup>
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isBusy}
+              className="h-11 min-w-32"
+            >
+              {isBusy ? (
+                <>
+                  <LoaderCircle className="animate-spin" aria-hidden="true" />
+                  Checking
+                </>
+              ) : (
+                <>
+                  Find assets
+                  <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                </>
+              )}
+            </Button>
+          </div>
+          <FieldError id={errorId}>{errorMessage}</FieldError>
+        </Field>
 
         <Collapsible
           open={tokenOpen}
           onOpenChange={setTokenOpen}
-          className="rounded-3xl border border-border/70 bg-muted/35"
+          className="w-full"
         >
           <CollapsibleTrigger
-            type="button"
-            className="group flex min-h-11 w-full items-center gap-3 rounded-3xl px-4 py-2 text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+            render={<Button type="button" variant="ghost" size="sm" />}
+            className="group -ml-3 w-fit text-muted-foreground"
           >
-            <KeyRound
-              className="size-4 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="min-w-0 flex-1">
-              Optional GitHub authentication
-            </span>
+            <KeyRound aria-hidden="true" />
+            Use a GitHub token
+            <Badge variant="outline" className="ml-1 text-foreground">
+              Optional
+            </Badge>
             <ChevronDown
-              className="size-4 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-180"
+              data-icon="inline-end"
+              className="transition-transform group-data-panel-open:rotate-180"
               aria-hidden="true"
             />
           </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pb-4">
-            <div className="space-y-2 border-t border-border/70 pt-4">
-              <Label htmlFor={tokenId}>GitHub token</Label>
-              <Input
-                id={tokenId}
-                name="github-token"
-                type="password"
-                value={token}
-                onChange={(event) => onTokenChange(event.target.value)}
-                placeholder="github_pat_…"
-                autoComplete="off"
-                spellCheck="false"
-                maxLength={255}
-                aria-describedby={tokenDescriptionId}
-                className="h-11 px-4"
-              />
-              <p
-                id={tokenDescriptionId}
-                className="text-xs leading-relaxed text-foreground/80"
-              >
-                Use a fine-grained token with read-only public repository
-                access. It is sent to this deployment for forwarding to GitHub,
-                kept only in this page's memory, and never added to the URL or
-                browser storage.
-              </p>
+          <CollapsibleContent className="pt-3">
+            <div className="rounded-3xl bg-muted/45 p-4 sm:p-5">
+              <Field>
+                <FieldContent>
+                  <FieldLabel htmlFor={tokenId}>GitHub token</FieldLabel>
+                  <FieldDescription
+                    id={tokenUsageId}
+                    className="text-foreground/80"
+                  >
+                    Use a fine-grained token with read-only public repository
+                    access when anonymous requests are rate-limited.
+                  </FieldDescription>
+                </FieldContent>
+                <InputGroup className="h-11 border-border/70 bg-background">
+                  <InputGroupInput
+                    id={tokenId}
+                    name="github-token"
+                    type={tokenVisible ? 'text' : 'password'}
+                    value={token}
+                    onChange={(event) => onTokenChange(event.target.value)}
+                    placeholder="github_pat_…"
+                    autoComplete="off"
+                    spellCheck="false"
+                    maxLength={255}
+                    aria-describedby={`${tokenUsageId} ${tokenSecurityId}`}
+                  />
+                  <InputGroupAddon>
+                    <KeyRound aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      size="icon-sm"
+                      aria-label={tokenVisible ? 'Hide token' : 'Show token'}
+                      aria-pressed={tokenVisible}
+                      onClick={() => setTokenVisible((visible) => !visible)}
+                    >
+                      {tokenVisible ? (
+                        <EyeOff aria-hidden="true" />
+                      ) : (
+                        <Eye aria-hidden="true" />
+                      )}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription
+                  id={tokenSecurityId}
+                  className="text-xs text-foreground/80"
+                >
+                  Forwarded through this deployment to GitHub, kept only in page
+                  memory, and never added to the URL or browser storage.
+                </FieldDescription>
+              </Field>
             </div>
           </CollapsibleContent>
         </Collapsible>
-      </div>
+      </FieldGroup>
     </form>
   );
 }

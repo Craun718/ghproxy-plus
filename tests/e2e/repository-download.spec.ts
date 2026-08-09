@@ -159,10 +159,12 @@ test('keeps GitHub authentication optional and sends it in a header', async ({
   await page.goto('/');
   await expect(page.getByLabel('GitHub token')).toHaveCount(0);
 
-  await page
-    .getByRole('button', { name: 'Optional GitHub authentication' })
-    .click();
-  await page.getByLabel('GitHub token').fill('github_pat_e2e-token');
+  await page.getByRole('button', { name: /Use a GitHub token/ }).click();
+  const tokenInput = page.getByLabel('GitHub token');
+  await expect(tokenInput).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: 'Show token' }).click();
+  await expect(tokenInput).toHaveAttribute('type', 'text');
+  await tokenInput.fill('github_pat_e2e-token');
   await page.getByLabel('GitHub repository').fill('owner/repo');
 
   const requestPromise = page.waitForRequest('**/api/repos/**');
@@ -260,9 +262,7 @@ test('has no horizontal overflow at target breakpoints', async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto('/?repo=owner%2Frepo');
     await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
-    await page
-      .getByRole('button', { name: 'Optional GitHub authentication' })
-      .click();
+    await page.getByRole('button', { name: /Use a GitHub token/ }).click();
     await expect(page.getByLabel('GitHub token')).toBeVisible();
 
     expect(

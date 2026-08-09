@@ -121,6 +121,28 @@ describe('HomePage release states', () => {
     );
   });
 
+  it('reveals and masks the optional GitHub token on demand', async () => {
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole('button', { name: /Use a GitHub token/ })
+    );
+    const tokenInput = screen.getByLabelText('GitHub token');
+    await user.type(tokenInput, 'github_pat_test-token');
+
+    expect(tokenInput).toHaveAttribute('type', 'password');
+    await user.click(screen.getByRole('button', { name: 'Show token' }));
+    expect(tokenInput).toHaveAttribute('type', 'text');
+    expect(tokenInput).toHaveValue('github_pat_test-token');
+    await user.click(screen.getByRole('button', { name: 'Hide token' }));
+    expect(tokenInput).toHaveAttribute('type', 'password');
+  });
+
   it('keeps one release actionable', async () => {
     mockRepositoryResponse(
       createResponse([
