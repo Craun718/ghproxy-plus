@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；搜索表单视觉精炼已完成
+- 状态：当前工作区权威方案（Source of Truth）；Input Group 图标定位回归修复实施中
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -417,6 +417,18 @@ pnpm build
   至 1440px 布局。
 - P3：通过全部质量门禁并同步本文档和 `TODO.md` 的实施状态。
 
+### P6：Input Group 图标定位回归修复（实施中）
+
+- P0：保留 shadcn/ui 官方要求的 DOM 顺序，即 `InputGroupAddon` 位于
+  `InputGroupInput` 之后；前置 GitHub/Key 图标使用 `align="inline-start"`，Token
+  显示/隐藏按钮使用 `align="inline-end"`，不得通过交换 DOM 顺序规避样式问题。
+- P1：清理 Farm 的可再生构建缓存并重新生成 Tailwind CSS，确保产物包含
+  `order-first` 与 `order-last` utility；缓存和构建产物不得提交到仓库。
+- P2：增加桌面与移动端 E2E 位置回归，断言前置 addon 位于输入控件左侧、后置
+  addon 位于 Token 输入控件右侧，同时保留既有键盘焦点顺序和 320px 无溢出验收。
+- P3：复核 1440px 与 320px Token 展开态截图，通过全部质量门禁后同步本文档和
+  `TODO.md` 的完成状态。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -435,6 +447,9 @@ pnpm build
 - 320px 以上视口在 Token 收起和展开状态均无水平溢出。
 - 搜索表单使用 shadcn/ui 官方 `Field`、`InputGroup`、`Collapsible`、`Button` 和
   `Badge` 组合；Token 区域视觉上从属于仓库主输入，不形成 Card 套 Card。
+- GitHub 与 Key 前置 addon 在桌面和移动端都必须位于对应输入文字左侧；Token
+  显示/隐藏按钮必须位于输入文字右侧。实现保持 addon 在 input 后的官方 DOM 顺序，
+  并由 `align` 与 Tailwind flex order utility 控制视觉位置。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
 - README、`DESIGN.md`、`TODO.md` 与实际实现一致。
 
