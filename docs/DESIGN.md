@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；搜索表单视觉精炼实施中
+- 状态：当前工作区权威方案（Source of Truth）；搜索表单视觉精炼已完成
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -408,7 +408,7 @@ pnpm build
 - P2：补齐 320px 与 Token 展开态的组件、E2E、键盘和 axe 回归。
 - P3：通过全部质量门禁并同步本文档和 `TODO.md` 的实施状态。
 
-### P5：搜索表单视觉精炼
+### P5：搜索表单视觉精炼（已完成）
 
 - P0：通过正式 shadcn/ui CLI 增加 Base UI `Field` 与 `InputGroup` 源码组件。
 - P1：以官方组合重构仓库输入、错误反馈和 Token 折叠区域，移除 Card 内部的重边框
@@ -448,14 +448,17 @@ pnpm build
 - Node.js 支持版本为 22 及以上，包管理器固定为 pnpm 11.9.0；仓库仅保留
   `pnpm-lock.yaml`。
 - shadcn/ui 使用 `base-luma` 风格与 Base UI 原语；业务实际使用的通用原语保留在
-  `src/components/ui/`，Radix 目标组件和未使用组件已移除。
+  `src/components/ui/`，Radix 目标组件和未使用组件已移除。搜索表单使用官方 CLI
+  生成并经 Biome 审查的 `Field`、`InputGroup`、`Collapsible`、`Button` 和 `Badge`
+  组合。
 - `src/models/repository-download-model.ts` 管理异步状态、请求取消、竞态保护和选择；
   URL 通过单一 hook 恢复并 replace 同步 `repo`、`release` 和 `asset`。
 - `/api/repos/:owner/:repo/releases` 统一访问 GitHub、执行内存缓存、默认分支回退、
   数据归一化和稳定错误映射；前端不再直接请求 GitHub API。
 - 仓库查询表单提供折叠的临时 GitHub Token 输入；Token 只存在于页面局部状态并
   通过同源请求头传递，带 Token 的请求绕过共享缓存、使用 `private, no-store`，
-  无效 Token 映射为 `invalid-token`，限流时自动展开认证区域。
+  无效 Token 映射为 `invalid-token`，限流时自动展开认证区域。Token disclosure 为
+  轻量辅助操作，展开后使用单层 muted surface 和带显示/隐藏操作的密码 Input Group。
 - `/docs` 使用路由懒加载，Worker 静态资源启用 SPA fallback，主页不加载 API
   Markdown。
 - 首页示例为 `noctisynth/semifold`，顶部导航显示 `API Docs`，浏览器标题为
@@ -465,8 +468,8 @@ pnpm build
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
   typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
 - 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 100,000 bytes。当前构建分别约为 861.3 KiB、
+  260,000 bytes、应用 CSS 100,000 bytes。当前构建分别约为 875.4 KiB、
   225.5 KiB 和 83.3 KiB。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。
+  本地浏览器冒烟预算。当前 Vitest 42/42、Playwright 14/14 通过。
