@@ -1,44 +1,50 @@
-name: Lint
+name: Quality
 
 on:
   push:
     branches: ["**"]
 
 jobs:
-  lint-and-fix:
-    name: Lint and Fix
+  quality:
+    name: Typecheck, lint, test and build
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Markdown lint and fix
-        uses: DavidAnson/markdownlint-cli2-action@v20
-        with:
-          globs: |
-            "**/*.md"
-          fix: true
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4.1.0
         with:
-          version: latest
+          version: 11.9.0
 
-      - name: Set node LTS
+      - name: Set Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: latest
+          node-version: 24
           cache: pnpm
 
       - name: Install
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Code Lint and Fix
-        run: pnpm lint:fix
+      - name: Typecheck
+        run: pnpm typecheck
 
-      - name: Commit and Push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: format and lint fix [skip ci]"
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Bundle budget
+        run: pnpm check:bundle
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: End-to-end and accessibility tests
+        run: pnpm test:e2e
