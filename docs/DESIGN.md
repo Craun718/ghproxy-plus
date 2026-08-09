@@ -53,8 +53,9 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 以下上游变化不属于本轮同步：Radix/new-york 组件树、Tabler 图标迁移、旧的单文件
 页面与浏览器直连 GitHub API、sessionStorage 缓存、双锁文件、camelCase 文件、自动
 修复并推送的 CI、排除 shadcn/ui 的 Biome 配置、pre-commit 和纯格式化提交。
-`wrangler.jsonc` 的 Worker 名称暂时保持 `gpp-hono`；改为
-`ghproxy-plus-backend` 会改变部署目标，只有用户明确批准部署迁移后才能实施。
+`wrangler.jsonc` 的 Worker 名称同步为上游的 `ghproxy-plus-backend`。该名称是新的
+唯一部署目标；不得继续以旧名称 `gpp-hono` 发布。名称迁移本身不授权真实部署，也
+不自动复制 Cloudflare 环境中的自定义域、变量、路由或其他资源绑定。
 
 ## 2. 产品目标
 
@@ -484,7 +485,8 @@ pnpm build
 ### P7：Craun718 上游选择性同步（待实施）
 
 - P0：将应用 Header、Footer、README 与部署入口中的 canonical repository 统一为
-  `https://github.com/Craun718/ghproxy-plus`；保留当前前端源码和全部强制技术决策。
+  `https://github.com/Craun718/ghproxy-plus`，并将 Wrangler Worker 名称统一为
+  `ghproxy-plus-backend`；保留当前前端源码和全部强制技术决策。
 - P1：先为原始文件名、附件下载、重定向、编码和 header 注入建立失败测试，再在
   `src/api/ghproxy.ts` 安全实现 `Content-Disposition`，不直接 cherry-pick 上游实现。
 - P2：通过正式 shadcn/ui CLI 增加 Base UI Combobox，以当前 Zustand 模型和 URL
@@ -493,7 +495,7 @@ pnpm build
   Wrangler dry-run；若完整 Combobox 样式超过现有 110,000-byte CSS 预算，必须停下
   请求批准，不得隐式提高预算。
 - P4：同步 README、本文档和 `TODO.md`，并在不覆盖新仓库 `main` 的前提下另行确认
-  Git remote/分支迁移方式。Worker 名称变更不随本轮代码自动实施。
+  Git remote/分支迁移方式。真实 Cloudflare 部署与现有环境资源迁移仍需单独授权。
 
 ## 10. 验收定义
 
@@ -518,6 +520,8 @@ pnpm build
   并由 `align` 与 Tailwind flex order utility 控制视觉位置。
 - 应用与文档不再包含 `NtskwK/ghproxy-plus` canonical 链接；所有面向用户的源码和
   部署入口指向 `Craun718/ghproxy-plus`。
+- `wrangler.jsonc` 的 Worker 名称为 `ghproxy-plus-backend`，Wrangler dry-run 能以该
+  名称完成配置解析；仓库不得继续声明旧名称 `gpp-hono`。
 - GitHub 代理下载在直接响应和 CDN 重定向后都使用安全的原始文件名，并强制附件
   下载；Unicode 与恶意文件名不会造成乱码、路径逃逸或 header 注入。
 - Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL

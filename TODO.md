@@ -9,6 +9,8 @@
 
 - [ ] P0：将 Header、Footer、README 和部署入口中的 canonical repository 统一为
   `https://github.com/Craun718/ghproxy-plus`，并增加无旧 owner 链接的回归检查。
+- [ ] P0：将 `wrangler.jsonc` 的 Worker 名称从 `gpp-hono` 改为
+  `ghproxy-plus-backend`，通过构建与 Wrangler dry-run；不执行真实部署或环境资源迁移。
 - [ ] P1：为 `/api/ghproxy/` 增加直接文件、多跳重定向、GET/HEAD、range、Unicode、
   百分号编码和恶意文件名测试。
 - [ ] P1：安全实现强制附件下载和原始 GitHub 文件名保留，提供 ASCII `filename` 与
@@ -22,4 +24,4 @@
 - [ ] P3：补齐组件、E2E、axe、键盘、下载文件名和 320px 弹层回归，运行 typecheck、
   Biome、单元/组件测试、build、bundle、Playwright 与 Wrangler dry-run。
 - [ ] P4：同步 README、`docs/DESIGN.md` 和本文件；另行确认 Git remote/分支迁移，
-  不覆盖新仓库 `main`，不自动修改当前 Worker 名称 `gpp-hono`。
+  不覆盖新仓库 `main`；真实 Cloudflare 部署与环境资源迁移另行授权。
