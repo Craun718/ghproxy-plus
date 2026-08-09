@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；可靠性与产品文案后续任务已完成
+- 状态：当前工作区权威方案（Source of Truth）；搜索表单视觉精炼实施中
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -158,6 +158,16 @@ Drawer 承载桌面端长文档。
   localStorage、sessionStorage、Cookie、日志或分析事件；刷新或离开页面后即丢弃。
 - 无 Token 时的现有查询、URL 恢复和分享行为保持不变；从分享 URL 自动恢复查询时
   不携带 Token。
+- 表单组合遵循 shadcn/ui 官方 Base UI
+  [Field](https://ui.shadcn.com/docs/components/base/field)、
+  [Input Group](https://ui.shadcn.com/docs/components/base/input-group) 和
+  [Collapsible](https://ui.shadcn.com/docs/components/base/collapsible) 用例；使用正式 CLI
+  生成的 `Field` 与 `InputGroup` 组件，不在业务组件中重新实现其状态和结构样式。
+- 仓库地址和 Token 都以 `Field` 组织 label、description、control 与 error。Token
+  密码框使用 `InputGroup` 承载前置图标和显示/隐藏按钮，保持正确的 DOM 与焦点顺序。
+- Token 折叠触发器使用轻量 `Button` 和 `Badge` 表达“可选”，不得使用完整描边容器、
+  分隔线和多层大圆角制造 Card 套 Card。展开内容使用单层低对比度 surface，并与主
+  字段保持清晰的间距和层级。
 
 ### 4.3 推荐资产
 
@@ -398,6 +408,15 @@ pnpm build
 - P2：补齐 320px 与 Token 展开态的组件、E2E、键盘和 axe 回归。
 - P3：通过全部质量门禁并同步本文档和 `TODO.md` 的实施状态。
 
+### P5：搜索表单视觉精炼
+
+- P0：通过正式 shadcn/ui CLI 增加 Base UI `Field` 与 `InputGroup` 源码组件。
+- P1：以官方组合重构仓库输入、错误反馈和 Token 折叠区域，移除 Card 内部的重边框
+  嵌套布局，不改变数据流与安全策略。
+- P2：验证 Token 密码显示/隐藏、限流自动展开、键盘焦点顺序、axe，以及 320px
+  至 1440px 布局。
+- P3：通过全部质量门禁并同步本文档和 `TODO.md` 的实施状态。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -414,6 +433,8 @@ pnpm build
 - 首页示例为 `noctisynth/semifold`，导航显示 `API Docs`，浏览器标题为
   `GitHub Proxy Plus`。
 - 320px 以上视口在 Token 收起和展开状态均无水平溢出。
+- 搜索表单使用 shadcn/ui 官方 `Field`、`InputGroup`、`Collapsible`、`Button` 和
+  `Badge` 组合；Token 区域视觉上从属于仓库主输入，不形成 Card 套 Card。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
 - README、`DESIGN.md`、`TODO.md` 与实际实现一致。
 
