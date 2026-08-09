@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；Input Group 图标定位回归修复实施中
+- 状态：当前工作区权威方案（Source of Truth）；Input Group 图标定位回归修复已完成
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -417,7 +417,7 @@ pnpm build
   至 1440px 布局。
 - P3：通过全部质量门禁并同步本文档和 `TODO.md` 的实施状态。
 
-### P6：Input Group 图标定位回归修复（实施中）
+### P6：Input Group 图标定位回归修复（已完成）
 
 - P0：保留 shadcn/ui 官方要求的 DOM 顺序，即 `InputGroupAddon` 位于
   `InputGroupInput` 之后；前置 GitHub/Key 图标使用 `align="inline-start"`，Token
@@ -467,7 +467,8 @@ pnpm build
 - shadcn/ui 使用 `base-luma` 风格与 Base UI 原语；业务实际使用的通用原语保留在
   `src/components/ui/`，Radix 目标组件和未使用组件已移除。搜索表单使用官方 CLI
   生成并经 Biome 审查的 `Field`、`InputGroup`、`Collapsible`、`Button` 和 `Badge`
-  组合。
+  组合。GitHub 与 Key addon 显式使用 `inline-start`，Token 显示/隐藏 addon 使用
+  `inline-end`；三者保持在 input 后的官方 DOM 顺序，并由 E2E 校验实际视觉位置。
 - `src/models/repository-download-model.ts` 管理异步状态、请求取消、竞态保护和选择；
   URL 通过单一 hook 恢复并 replace 同步 `repo`、`release` 和 `asset`。
 - `/api/repos/:owner/:repo/releases` 统一访问 GitHub、执行内存缓存、默认分支回退、
@@ -489,4 +490,4 @@ pnpm build
   225.5 KiB 和 102.1 KiB；CSS gzip 后约 13.7 KiB、Brotli 后约 11.0 KiB。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。当前 Vitest 42/42、Playwright 14/14 通过。
+  本地浏览器冒烟预算。当前 Vitest 42/42、Playwright 16/16 通过。
