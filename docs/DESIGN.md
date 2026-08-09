@@ -426,7 +426,9 @@ pnpm build
   `order-first` 与 `order-last` utility；缓存和构建产物不得提交到仓库。
 - P2：增加桌面与移动端 E2E 位置回归，断言前置 addon 位于输入控件左侧、后置
   addon 位于 Token 输入控件右侧，同时保留既有键盘焦点顺序和 320px 无溢出验收。
-- P3：复核 1440px 与 320px Token 展开态截图，通过全部质量门禁后同步本文档和
+- P3：完整 Tailwind CSS 冷构建产物以 110,000 bytes 作为未压缩体积预算；该预算
+  已由用户确认，用于保留正式 shadcn/ui `Field` 与 `InputGroup` 源码及其完整样式。
+- P4：复核 1440px 与 320px Token 展开态截图，通过全部质量门禁后同步本文档和
   `TODO.md` 的完成状态。
 
 ## 10. 验收定义
@@ -483,8 +485,8 @@ pnpm build
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
   typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
 - 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 100,000 bytes。当前构建分别约为 875.4 KiB、
-  225.5 KiB 和 83.3 KiB。
+  260,000 bytes、应用 CSS 110,000 bytes。当前冷构建分别约为 875.4 KiB、
+  225.5 KiB 和 102.1 KiB；CSS gzip 后约 13.7 KiB、Brotli 后约 11.0 KiB。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
   本地浏览器冒烟预算。当前 Vitest 42/42、Playwright 14/14 通过。
