@@ -2,14 +2,15 @@
 
 ghproxy-plus finds a suitable GitHub Release asset for the current device and
 downloads it through a self-hosted GitHub proxy. It also keeps the low-level
-proxy and smart-download APIs available for direct use.
+proxy API available for direct use.
 
 Canonical repository: [Craun718/ghproxy-plus](https://github.com/Craun718/ghproxy-plus)
 
 The frontend is a React 19 + Farm SPA. Its component layer uses shadcn/ui Luma
 components generated on Base UI primitives, Tailwind CSS, and the existing
 light/dark OKLCH palette. Shared repository state lives in a Zustand model and
-all GitHub responses are normalized by the project API before reaching the UI.
+all GitHub responses are normalized by the browser API client before reaching
+the model or UI.
 Searchable Release and Asset Comboboxes load on demand after repository results
 arrive, while their transient search state remains local to each component.
 
@@ -32,8 +33,9 @@ Run the frontend-only Farm server on `http://127.0.0.1:3000`:
 pnpm dev
 ```
 
-Repository queries need the Hono API. Build the frontend and run the complete
-Cloudflare Workers application locally with:
+The Farm server can query public GitHub repositories directly from the browser.
+To exercise `/api/ghproxy/` downloads as well, build the frontend and run the
+complete Cloudflare Workers application locally with:
 
 ```bash
 pnpm dev:wrangler
@@ -61,8 +63,8 @@ src/
 The key request path is:
 
 ```text
-HomePage -> Zustand repository model -> /api/repos/:owner/:repo/releases
-         -> normalized releases -> pure asset recommendation
+HomePage -> Zustand repository model -> browser GitHub API client
+         -> normalized repository/releases -> pure asset recommendation
          -> /api/ghproxy/:github-url
 ```
 
@@ -92,16 +94,6 @@ changes.
 
 ## API
 
-### Repository releases
-
-```text
-GET /api/repos/:owner/:repo/releases
-```
-
-Returns normalized repository, release, source archive, binary, checksum, and
-signature metadata. Errors use stable codes including `invalid`, `not-found`,
-`rate-limit`, and `server`.
-
 ### GitHub proxy
 
 ```text
@@ -112,15 +104,6 @@ Proxies supported GitHub release, archive, raw file, repository, tag, and gist
 URLs with CORS response headers. Successful file responses force attachment
 downloads and preserve the safely encoded filename from the original GitHub
 URL across CDN redirects.
-
-### Smart download
-
-```text
-GET /api/download/:github-repository-url?keyword=optional
-```
-
-Redirects to the latest matching release asset through `/api/ghproxy/`. A zero
-match never falls back to an arbitrary asset.
 
 ### Health check
 

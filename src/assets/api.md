@@ -8,48 +8,7 @@ Proxies GitHub resources with CORS headers, allowing accelerated access to GitHu
 
 ---
 
-## 2. Smart download API
-
-**Endpoint:** `/api/download/{github-repo-url}`
-
-Automatically detects the user's operating system and architecture from the User-Agent header and downloads the most appropriate release asset from the latest release.
-
-**Parameters:**
-
-- `keyword` (optional): Additional keyword to filter assets
-
-**Example:**
-
-```text
-https://your-domain.example/api/download/github.com/owner/repo
-```
-
-**Detection Logic:**
-
-- Parses User-Agent to determine OS (Windows, macOS, Linux, Android, iOS, etc.)
-- Detects CPU architecture (x86_64, arm64, etc.)
-- Automatically selects the best matching asset from the latest release
-- Returns no automatic match when platform, architecture, or keyword matching is
-  not reliable; it never silently chooses an arbitrary file
-
----
-
-## 3. Repository releases API
-
-**Endpoint:** `/api/repos/{owner}/{repo}/releases`
-
-Returns normalized repository metadata, releases, source archives, and asset
-metadata for the web interface. Errors use stable codes such as `invalid`,
-`invalid-token`, `not-found`, `rate-limit`, and `server`.
-
-When anonymous GitHub API limits are exhausted, callers may provide a temporary
-GitHub Token in the `X-GitHub-Token` request header. The service forwards it to
-GitHub for that request only. Authenticated requests bypass shared caches and
-return `Cache-Control: private, no-store`; tokens must never be placed in URLs.
-
----
-
-## 4. Health check API
+## 2. Health check API
 
 **Endpoint:** `/api/ping`
 

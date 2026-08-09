@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；PR #2 review 修订实施中
+- 状态：当前工作区权威方案（Source of Truth）；PR #2 review 修订已完成
 - 最近更新：2026-08-10
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -512,7 +512,7 @@ pnpm build
 - P4：同步 README、本文档和 `TODO.md`，并在不覆盖新仓库 `main` 的前提下另行确认
   Git remote/分支迁移方式。真实 Cloudflare 部署与现有环境资源迁移仍需单独授权。
 
-### P8：PR #2 review 修订（实施中）
+### P8：PR #2 review 修订（已完成）
 
 - P0：将仓库与 Release 查询迁移到浏览器 GitHub API client，保持归一化响应、
   Zustand 单向状态流、竞态取消和 URL 恢复；Token 只直接发送给 GitHub。
@@ -560,7 +560,7 @@ pnpm build
 ## 11. 当前实施基线
 
 Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review 和预览环境
-429 证据批准 P8 数据边界修订；修订实施状态由根目录 `TODO.md` 跟踪。
+429 证据批准并完成 P8 数据边界修订。
 
 当前基线：
 
@@ -578,8 +578,9 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
   `inline-end`；三者保持在 input 后的官方 DOM 顺序，并由 E2E 校验实际视觉位置。
 - `src/models/repository-download-model.ts` 管理异步状态、请求取消、竞态保护和选择；
   URL 通过单一 hook 恢复并 replace 同步 `repo`、`release` 和 `asset`。
-- P8 完成后，`src/lib/repository-api.ts` 由浏览器直接访问 GitHub、执行默认分支回退、
-  数据归一化和稳定错误映射；Worker 仓库查询与 LRU 缓存退出运行路径。
+- `src/lib/repository-api.ts` 由浏览器直接访问 GitHub、执行默认分支回退、数据归一化
+  和稳定错误映射；Worker 仓库查询、LRU 缓存与旧 `/api/download` 已退出运行路径，
+  `/api/ghproxy/` 保持不变。
 - 仓库查询表单提供折叠的临时 GitHub Token 输入；Token 只存在于页面局部状态并由
   浏览器直接发送给 GitHub API，不经过当前 Worker。无效 Token 映射为
   `invalid-token`，限流时自动展开认证区域。Token disclosure 为
@@ -601,8 +602,8 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
   typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
 - 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 110,000 bytes。当前冷构建分别约为 746.6 KiB、
-  225.5 KiB 和 102.1 KiB；高级选择器不进入初始主页 JavaScript。
+  260,000 bytes、应用 CSS 110,000 bytes。当前构建分别约为 750.2 KiB、225.5 KiB
+  和 99.3 KiB；高级选择器不进入初始主页 JavaScript。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。当前 Vitest 57/57、Playwright 20/20 通过。
+  本地浏览器冒烟预算。当前 Vitest 61/61、Playwright 20/20 通过。
