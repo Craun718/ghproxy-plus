@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 const repositoryResponse = {
   repository: {
@@ -92,6 +92,38 @@ async function mockRepositoryApi(page: Page) {
       body: JSON.stringify(repositoryResponse)
     })
   );
+}
+
+async function expectInlineAddonPlacement(
+  input: Locator,
+  options: { hasInlineEnd?: boolean } = {}
+) {
+  const inputGroup = input.locator('..');
+  const inlineStart = inputGroup.locator('[data-align="inline-start"]');
+  const [inputBox, inlineStartBox] = await Promise.all([
+    input.boundingBox(),
+    inlineStart.boundingBox()
+  ]);
+
+  if (!inputBox || !inlineStartBox) {
+    throw new Error('Input Group control and inline-start addon must render.');
+  }
+
+  await expect(inlineStart).toHaveCSS('order', '-9999');
+  expect(inlineStartBox.x + inlineStartBox.width).toBeLessThanOrEqual(
+    inputBox.x
+  );
+
+  if (!options.hasInlineEnd) return;
+
+  const inlineEnd = inputGroup.locator('[data-align="inline-end"]');
+  const inlineEndBox = await inlineEnd.boundingBox();
+  if (!inlineEndBox) {
+    throw new Error('Input Group inline-end addon must render.');
+  }
+
+  await expect(inlineEnd).toHaveCSS('order', '9999');
+  expect(inputBox.x + inputBox.width).toBeLessThanOrEqual(inlineEndBox.x);
 }
 
 async function observeWebVitals(page: Page) {
@@ -270,6 +302,25 @@ test('has no horizontal overflow at target breakpoints', async ({ page }) => {
         () => document.documentElement.scrollWidth <= window.innerWidth
       )
     ).toBe(true);
+  }
+});
+
+test('keeps input group addons on their declared inline edges', async ({
+  page
+}) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 320, height: 720 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    await expectInlineAddonPlacement(page.getByLabel('GitHub repository'));
+
+    await page.getByRole('button', { name: /Use a GitHub token/ }).click();
+    await expectInlineAddonPlacement(page.getByLabel('GitHub token'), {
+      hasInlineEnd: true
+    });
   }
 });
 

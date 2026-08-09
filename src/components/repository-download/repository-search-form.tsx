@@ -95,7 +95,7 @@ export function RepositorySearchForm({
                 }
                 aria-invalid={Boolean(errorMessage)}
               />
-              <InputGroupAddon>
+              <InputGroupAddon align="inline-start">
                 <Github aria-hidden="true" />
               </InputGroupAddon>
             </InputGroup>
@@ -167,7 +167,7 @@ export function RepositorySearchForm({
                     maxLength={255}
                     aria-describedby={`${tokenUsageId} ${tokenSecurityId}`}
                   />
-                  <InputGroupAddon>
+                  <InputGroupAddon align="inline-start">
                     <KeyRound aria-hidden="true" />
                   </InputGroupAddon>
                   <InputGroupAddon align="inline-end">
