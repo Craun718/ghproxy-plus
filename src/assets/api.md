@@ -1,6 +1,6 @@
-#
+# ghproxy plus API
 
-## _1. gh-proxy API_
+## 1. GitHub proxy API
 
 **Endpoint:** `/api/ghproxy/{github-url}`
 
@@ -8,7 +8,7 @@ Proxies GitHub resources with CORS headers, allowing accelerated access to GitHu
 
 ---
 
-## _2. Smart Download API_
+## 2. Smart download API
 
 **Endpoint:** `/api/download/{github-repo-url}`
 
@@ -20,20 +20,31 @@ Automatically detects the user's operating system and architecture from the User
 
 **Example:**
 
-~~curl -L https://[host]/api/download/github.com/owner/repo~~
-
-Don't fetch it! You can only access it through the browser.
+```text
+https://your-domain.example/api/download/github.com/owner/repo
+```
 
 **Detection Logic:**
 
 - Parses User-Agent to determine OS (Windows, macOS, Linux, Android, iOS, etc.)
 - Detects CPU architecture (x86_64, arm64, etc.)
 - Automatically selects the best matching asset from the latest release
-- Falls back to first asset if no match found
+- Returns no automatic match when platform, architecture, or keyword matching is
+  not reliable; it never silently chooses an arbitrary file
 
 ---
 
-### _3. Health Check API_
+## 3. Repository releases API
+
+**Endpoint:** `/api/repos/{owner}/{repo}/releases`
+
+Returns normalized repository metadata, releases, source archives, and asset
+metadata for the web interface. Errors use stable codes such as `invalid`,
+`not-found`, `rate-limit`, and `server`.
+
+---
+
+## 4. Health check API
 
 **Endpoint:** `/api/ping`
 
