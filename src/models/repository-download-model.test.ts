@@ -79,6 +79,20 @@ describe('repository download model', () => {
     expect(model.getState().error?.code).toBe('invalid');
   });
 
+  it('passes a token to one request without storing it in model state', async () => {
+    const fetcher = vi.fn().mockResolvedValue(createResponse());
+    const model = createRepositoryDownloadModel(fetcher);
+
+    await model.getState().resolveRepository('owner/repo', {
+      token: 'github_pat_ephemeral-token'
+    });
+
+    expect(fetcher.mock.calls[0]?.[2]).toMatchObject({
+      token: 'github_pat_ephemeral-token'
+    });
+    expect(model.getState()).not.toHaveProperty('token');
+  });
+
   it('clears stale repository data before reporting invalid input', async () => {
     const fetcher = vi.fn().mockResolvedValue(createResponse());
     const model = createRepositoryDownloadModel(fetcher);

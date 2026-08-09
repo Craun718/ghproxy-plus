@@ -25,6 +25,7 @@ interface ResolveRepositoryOptions {
   releaseId?: string | null;
   assetId?: string | null;
   userAgent?: string;
+  token?: string;
 }
 
 type RepositoryFetcher = typeof fetchRepository;
@@ -155,7 +156,10 @@ export function createRepositoryDownloadModel(
         const response: RepositoryResponse = await repositoryFetcher(
           identifier.owner,
           identifier.repo,
-          abortController.signal
+          {
+            signal: abortController.signal,
+            token: options.token
+          }
         );
 
         if (currentRequestId !== requestId) return;

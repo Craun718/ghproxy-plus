@@ -26,6 +26,10 @@ const repositoryCache = new LRUCache<string, GitHubRepository>({
   ttl: 60_000
 });
 
+function canUseSharedCache(requestInit: RequestInit): boolean {
+  return !new Headers(requestInit.headers).has('authorization');
+}
+
 async function fetchGitHub<T>(
   url: string,
   requestInit: RequestInit = {}
@@ -67,14 +71,15 @@ export async function getRepository(
   requestInit: RequestInit = {}
 ): Promise<GitHubRepository> {
   const cacheKey = `${owner}/${repo}`.toLowerCase();
-  const cached = repositoryCache.get(cacheKey);
+  const useSharedCache = canUseSharedCache(requestInit);
+  const cached = useSharedCache ? repositoryCache.get(cacheKey) : undefined;
   if (cached) return cached;
 
   const repository = await fetchGitHub<GitHubRepository>(
     `https://api.github.com/repos/${owner}/${repo}`,
     requestInit
   );
-  repositoryCache.set(cacheKey, repository);
+  if (useSharedCache) repositoryCache.set(cacheKey, repository);
   return repository;
 }
 
@@ -84,7 +89,8 @@ export async function getRepositoryReleases(
   requestInit: RequestInit = {}
 ): Promise<GitHubRelease[]> {
   const cacheKey = `${owner}/${repo}`.toLowerCase();
-  const cached = releasesCache.get(cacheKey);
+  const useSharedCache = canUseSharedCache(requestInit);
+  const cached = useSharedCache ? releasesCache.get(cacheKey) : undefined;
   if (cached) return cached;
 
   const releases = await fetchGitHub<GitHubRelease[]>(
@@ -99,6 +105,6 @@ export async function getRepositoryReleases(
     ]
   }));
 
-  releasesCache.set(cacheKey, normalized);
+  if (useSharedCache) releasesCache.set(cacheKey, normalized);
   return normalized;
 }

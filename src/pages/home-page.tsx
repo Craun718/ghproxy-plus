@@ -31,6 +31,7 @@ import type { RepositoryErrorCode } from '@/models/repository-download-types';
 
 const errorTitles: Record<RepositoryErrorCode, string> = {
   invalid: 'Check the repository address',
+  'invalid-token': 'GitHub token rejected',
   'not-found': 'Repository not found',
   'rate-limit': 'GitHub rate limit reached',
   network: 'Network connection failed',
@@ -42,6 +43,7 @@ const errorTitles: Record<RepositoryErrorCode, string> = {
 export default function HomePage() {
   const { initialState, replaceUrlState } = useRepositoryUrlState();
   const [input, setInput] = useState(initialState.repo);
+  const [token, setToken] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const status = useRepositoryDownloadModel((state) => state.status);
@@ -93,8 +95,11 @@ export default function HomePage() {
     if (status === 'ready' && !selectedAssetId) setAdvancedOpen(true);
   }, [selectedAssetId, status]);
 
-  const handleSubmit = (value: string) => {
-    void resolveRepository(value, { userAgent: navigator.userAgent });
+  const handleSubmit = (value: string, githubToken: string) => {
+    void resolveRepository(value, {
+      userAgent: navigator.userAgent,
+      token: githubToken
+    });
   };
 
   const fieldError = error?.code === 'invalid' ? error.message : undefined;
@@ -131,9 +136,12 @@ export default function HomePage() {
         <CardContent>
           <RepositorySearchForm
             value={input}
+            token={token}
             status={status}
             errorMessage={fieldError}
+            promptForToken={error?.code === 'rate-limit'}
             onValueChange={setInput}
+            onTokenChange={setToken}
             onSubmit={handleSubmit}
           />
         </CardContent>

@@ -71,6 +71,18 @@ function mockRepositoryResponse(response: RepositoryResponse) {
   );
 }
 
+function mockRepositoryError(status: number, code: string, message: string) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { code, message } }), {
+        status,
+        headers: { 'content-type': 'application/json' }
+      })
+    )
+  );
+}
+
 async function submitRepository() {
   const user = userEvent.setup();
   await user.type(screen.getByLabelText('GitHub repository'), 'owner/repo');
@@ -194,6 +206,27 @@ describe('HomePage release states', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No assets in this release'
+    );
+  });
+
+  it('keeps authentication optional until GitHub rate limits a query', async () => {
+    mockRepositoryError(
+      429,
+      'rate-limit',
+      'GitHub rate limit reached. Add a token and retry.'
+    );
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByLabelText('GitHub token')).not.toBeInTheDocument();
+    await submitRepository();
+
+    expect(await screen.findByLabelText('GitHub token')).toBeVisible();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'GitHub rate limit reached'
     );
   });
 });

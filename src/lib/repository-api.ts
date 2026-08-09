@@ -21,6 +21,11 @@ export class RepositoryApiError extends Error {
   }
 }
 
+interface FetchRepositoryOptions {
+  signal?: AbortSignal;
+  token?: string;
+}
+
 function normalizeAsset(
   releaseId: string,
   asset: GitHubRelease['assets'][number],
@@ -74,14 +79,18 @@ export function normalizeRepositoryResponse(
 export async function fetchRepository(
   owner: string,
   repo: string,
-  signal?: AbortSignal
+  options: FetchRepositoryOptions = {}
 ): Promise<RepositoryResponse> {
   let response: Response;
+  const token = options.token?.trim();
 
   try {
     response = await fetch(
       `/api/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases`,
-      { signal }
+      {
+        signal: options.signal,
+        headers: token ? { 'X-GitHub-Token': token } : undefined
+      }
     );
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError')

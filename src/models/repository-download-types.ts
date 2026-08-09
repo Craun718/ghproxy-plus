@@ -48,6 +48,7 @@ export interface AssetRecommendation {
 
 export type RepositoryErrorCode =
   | 'invalid'
+  | 'invalid-token'
   | 'not-found'
   | 'rate-limit'
   | 'network'

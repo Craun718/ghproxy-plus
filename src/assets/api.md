@@ -40,7 +40,12 @@ https://your-domain.example/api/download/github.com/owner/repo
 
 Returns normalized repository metadata, releases, source archives, and asset
 metadata for the web interface. Errors use stable codes such as `invalid`,
-`not-found`, `rate-limit`, and `server`.
+`invalid-token`, `not-found`, `rate-limit`, and `server`.
+
+When anonymous GitHub API limits are exhausted, callers may provide a temporary
+GitHub Token in the `X-GitHub-Token` request header. The service forwards it to
+GitHub for that request only. Authenticated requests bypass shared caches and
+return `Cache-Control: private, no-store`; tokens must never be placed in URLs.
 
 ---
 

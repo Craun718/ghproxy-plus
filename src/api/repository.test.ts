@@ -68,4 +68,68 @@ describe('repository API', () => {
     expect(response.status).toBe(404);
     expect(payload.error.code).toBe('not-found');
   });
+
+  it('forwards a temporary token without using the shared GitHub cache', async () => {
+    const fetchMock = vi.fn(
+      (input: string | URL | Request, _requestInit?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/releases?per_page=100')) {
+          return Promise.resolve(Response.json([]));
+        }
+        return Promise.resolve(
+          Response.json({
+            name: 'token-repo',
+            full_name: 'token-owner/token-repo',
+            owner: { login: 'token-owner', avatar_url: '' },
+            default_branch: 'main',
+            description: null,
+            html_url: 'https://github.com/token-owner/token-repo'
+          })
+        );
+      }
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const request = () =>
+      createApp().request('/api/repos/token-owner/token-repo/releases', {
+        headers: { 'X-GitHub-Token': 'github_pat_test-token' }
+      });
+    const firstResponse = await request();
+    await request();
+
+    expect(firstResponse.headers.get('cache-control')).toBe(
+      'private, no-store'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    for (const [, requestInit] of fetchMock.mock.calls) {
+      expect(new Headers(requestInit?.headers).get('authorization')).toBe(
+        'Bearer github_pat_test-token'
+      );
+    }
+  });
+
+  it('maps rejected credentials without exposing the token', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { message: 'Bad credentials' },
+            { status: 401, statusText: 'Unauthorized' }
+          )
+        )
+    );
+
+    const response = await createApp().request(
+      '/api/repos/rejected-owner/rejected-repo/releases',
+      { headers: { 'X-GitHub-Token': 'github_pat_secret-value' } }
+    );
+    const responseText = await response.text();
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(JSON.parse(responseText).error.code).toBe('invalid-token');
+    expect(responseText).not.toContain('github_pat_secret-value');
+  });
 });
