@@ -10,6 +10,8 @@ The frontend is a React 19 + Farm SPA. Its component layer uses shadcn/ui Luma
 components generated on Base UI primitives, Tailwind CSS, and the existing
 light/dark OKLCH palette. Shared repository state lives in a Zustand model and
 all GitHub responses are normalized by the project API before reaching the UI.
+Searchable Release and Asset Comboboxes load on demand after repository results
+arrive, while their transient search state remains local to each component.
 
 ## Requirements
 
@@ -103,11 +105,13 @@ signature metadata. Errors use stable codes including `invalid`, `not-found`,
 ### GitHub proxy
 
 ```text
-GET /api/ghproxy/:github-url
+GET|HEAD /api/ghproxy/:github-url
 ```
 
 Proxies supported GitHub release, archive, raw file, repository, tag, and gist
-URLs with CORS response headers.
+URLs with CORS response headers. Successful file responses force attachment
+downloads and preserve the safely encoded filename from the original GitHub
+URL across CDN redirects.
 
 ### Smart download
 

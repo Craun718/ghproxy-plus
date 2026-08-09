@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；Craun718 上游选择性同步实施中
+- 状态：当前工作区权威方案（Source of Truth）；Craun718 上游选择性同步已完成
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -482,7 +482,7 @@ pnpm build
 - P4：复核 1440px 与 320px Token 展开态截图，通过全部质量门禁后同步本文档和
   `TODO.md` 的完成状态。
 
-### P7：Craun718 上游选择性同步（待实施）
+### P7：Craun718 上游选择性同步（已完成）
 
 - P0：将应用 Header、Footer、README 与部署入口中的 canonical repository 统一为
   `https://github.com/Craun718/ghproxy-plus`，并将 Wrangler Worker 名称统一为
@@ -540,6 +540,9 @@ pnpm build
   `pnpm-lock.yaml`。
 - Cloudflare Worker 名称为 `ghproxy-plus-backend`，构建和 Wrangler dry-run 已通过；
   真实部署、自定义域、变量、路由和其他 Cloudflare 环境资源迁移尚未执行。
+- canonical repository、Header、Footer、README 与 Cloudflare 一键部署入口统一指向
+  `https://github.com/Craun718/ghproxy-plus`；本地 `craun718` remote 跟踪该仓库，完整
+  重构通过新分支 `refactor-v2` 交付，不覆盖 `Craun718/main`。
 - shadcn/ui 使用 `base-luma` 风格与 Base UI 原语；业务实际使用的通用原语保留在
   `src/components/ui/`，Radix 目标组件和未使用组件已移除。搜索表单使用官方 CLI
   生成并经 Biome 审查的 `Field`、`InputGroup`、`Collapsible`、`Button` 和 `Badge`
@@ -555,6 +558,14 @@ pnpm build
   轻量辅助操作，展开后使用单层 muted surface 和带显示/隐藏操作的密码 Input Group。
 - `/docs` 使用路由懒加载，Worker 静态资源启用 SPA fallback，主页不加载 API
   Markdown。
+- Release 与 Asset 高级选择使用正式 shadcn/ui CLI 生成并经精简审查的 Base UI
+  Combobox。Release 按名称与 tag 搜索，Asset 按名称、类型、平台、架构和格式搜索并
+  保留分组、元数据及推荐标记；稳定 ID 仍是 Zustand 与 URL 的唯一选择标识。搜索词
+  和弹层状态只存在于组件本地，空结果不改变当前选择。高级选择器在仓库结果到达后
+  预取并在展开时按需加载。
+- `/api/ghproxy/` 支持成功 GET/HEAD 文件响应的强制附件下载，在多级 CDN 重定向后
+  保留初始 GitHub URL 文件名，并输出安全 ASCII `filename` 与 RFC 5987 `filename*`；
+  Unicode、非法百分号、路径分隔符、控制字符和 header 注入均有自动化回归覆盖。
 - 首页示例为 `noctisynth/semifold`，顶部导航显示 `API Docs`，浏览器标题为
   `GitHub Proxy Plus`。
 - `src/globals-css.test.ts` 锁定迁移前全部 light/dark OKLCH 值。为满足 WCAG AA，
@@ -562,8 +573,8 @@ pnpm build
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
   typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
 - 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 110,000 bytes。当前冷构建分别约为 875.4 KiB、
-  225.5 KiB 和 102.1 KiB；CSS gzip 后约 13.7 KiB、Brotli 后约 11.0 KiB。
+  260,000 bytes、应用 CSS 110,000 bytes。当前冷构建分别约为 746.6 KiB、
+  225.5 KiB 和 102.1 KiB；高级选择器不进入初始主页 JavaScript。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。当前 Vitest 42/42、Playwright 16/16 通过。
+  本地浏览器冒烟预算。当前 Vitest 57/57、Playwright 20/20 通过。
