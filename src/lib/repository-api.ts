@@ -26,6 +26,92 @@ interface FetchRepositoryOptions {
   token?: string;
 }
 
+const githubApiBaseUrl = 'https://api.github.com';
+
+function getSourceCodeAssets(
+  owner: string,
+  repo: string,
+  ref: string,
+  refType: 'tags' | 'heads' = 'tags'
+): GitHubRelease['assets'] {
+  return ['tar.gz', 'zip'].map((format) => ({
+    name: `SourceCode-${ref}.${format}`,
+    browser_download_url: `https://github.com/${owner}/${repo}/archive/refs/${refType}/${ref}.${format}`
+  }));
+}
+
+function getErrorDetails(status: number): {
+  code: string;
+  message: string;
+} {
+  if (status === 401) {
+    return {
+      code: 'invalid-token',
+      message: 'The GitHub token is invalid or no longer active.'
+    };
+  }
+
+  if (status === 403 || status === 429) {
+    return {
+      code: 'rate-limit',
+      message:
+        'GitHub rate limit reached. Wait and try again, or add a token under optional GitHub authentication.'
+    };
+  }
+
+  if (status === 404) {
+    return {
+      code: 'not-found',
+      message: 'The GitHub repository was not found.'
+    };
+  }
+
+  return {
+    code: 'server',
+    message: `GitHub returned ${status}.`
+  };
+}
+
+async function fetchGitHub<T>(
+  url: string,
+  requestInit: RequestInit
+): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(url, requestInit);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error;
+    }
+
+    throw new RepositoryApiError(
+      'network',
+      'GitHub could not be reached from this browser.',
+      503
+    );
+  }
+
+  if (!response.ok) {
+    const details = getErrorDetails(response.status);
+    throw new RepositoryApiError(
+      details.code,
+      details.message,
+      response.status
+    );
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new RepositoryApiError(
+      'server',
+      'GitHub returned an unreadable response.',
+      502
+    );
+  }
+}
+
 function normalizeAsset(
   releaseId: string,
   asset: GitHubRelease['assets'][number],
@@ -81,39 +167,46 @@ export async function fetchRepository(
   repo: string,
   options: FetchRepositoryOptions = {}
 ): Promise<RepositoryResponse> {
-  let response: Response;
   const token = options.token?.trim();
+  const repositoryPath = `${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const requestInit: RequestInit = {
+    signal: options.signal,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  };
 
-  try {
-    response = await fetch(
-      `/api/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases`,
-      {
-        signal: options.signal,
-        headers: token ? { 'X-GitHub-Token': token } : undefined
-      }
-    );
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError')
-      throw error;
-    throw new RepositoryApiError(
-      'network',
-      'The repository service could not be reached.',
-      503
-    );
+  const [repository, githubReleases] = await Promise.all([
+    fetchGitHub<GitHubRepository>(
+      `${githubApiBaseUrl}/repos/${repositoryPath}`,
+      requestInit
+    ),
+    fetchGitHub<GitHubRelease[]>(
+      `${githubApiBaseUrl}/repos/${repositoryPath}/releases?per_page=100`,
+      requestInit
+    )
+  ]);
+
+  const releases = githubReleases.map((release) => ({
+    ...release,
+    assets: [
+      ...release.assets,
+      ...getSourceCodeAssets(owner, repo, release.tag_name)
+    ]
+  }));
+
+  if (releases.length === 0) {
+    const branch = repository.default_branch;
+    releases.push({
+      id: 0,
+      name: `Default branch — ${branch}`,
+      tag_name: branch,
+      assets: getSourceCodeAssets(owner, repo, branch, 'heads'),
+      prerelease: false
+    });
   }
 
-  const payload = (await response.json()) as
-    | RepositoryResponse
-    | { error?: { code?: string; message?: string } };
-
-  if (!response.ok) {
-    const apiError = 'error' in payload ? payload.error : undefined;
-    throw new RepositoryApiError(
-      apiError?.code ?? 'server',
-      apiError?.message ?? 'The repository could not be loaded.',
-      response.status
-    );
-  }
-
-  return payload as RepositoryResponse;
+  return normalizeRepositoryResponse(repository, releases);
 }

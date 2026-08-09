@@ -65,7 +65,7 @@ function AssetIcon({ kind }: { kind: AssetKind }) {
   return <Download className="size-4" aria-hidden="true" />;
 }
 
-function matchesAsset(asset: RepositoryAsset, query: string) {
+function matchesAssetSearch(asset: RepositoryAsset, query: string) {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   if (!normalizedQuery) return true;
 
@@ -101,10 +101,12 @@ export function AssetList({
   const [inputValue, setInputValue] = useState(() => selectedAsset?.name ?? '');
   const selectedLabel = selectedAsset?.name ?? '';
   const searchQuery = inputValue === selectedLabel ? '' : inputValue;
-  const filteredAssetGroups = assetGroups
+  const searchResultGroups = assetGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((asset) => matchesAsset(asset, searchQuery))
+      items: group.items.filter((asset) =>
+        matchesAssetSearch(asset, searchQuery)
+      )
     }))
     .filter((group) => group.items.length > 0);
 
@@ -117,7 +119,7 @@ export function AssetList({
       <Label htmlFor={inputId}>Asset</Label>
       <Combobox
         items={assetGroups}
-        filteredItems={filteredAssetGroups}
+        filteredItems={searchResultGroups}
         value={selectedAsset}
         inputValue={inputValue}
         onInputValueChange={setInputValue}

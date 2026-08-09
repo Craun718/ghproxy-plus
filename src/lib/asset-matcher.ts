@@ -5,11 +5,6 @@ import type {
   RepositoryAsset
 } from '@/models/repository-download-types';
 
-interface DownloadAssetLike {
-  name: string;
-  browser_download_url: string;
-}
-
 interface DeviceProfile {
   platform: string | null;
   architecture: string | null;
@@ -250,35 +245,4 @@ export function recommendAsset(
     reasons,
     ...profile
   };
-}
-
-export function getDownloadAsset<TAsset extends DownloadAssetLike>(
-  assets: TAsset[],
-  userAgent?: string,
-  keyword?: string
-): TAsset | undefined {
-  const normalized = assets.map<RepositoryAsset>((asset, index) => ({
-    id: String(index),
-    name: asset.name,
-    downloadUrl: asset.browser_download_url,
-    size: null,
-    downloadCount: null,
-    contentType: null,
-    kind: classifyAsset(asset.name),
-    format: inferAssetFormat(asset.name),
-    platform: inferAssetPlatform(asset.name),
-    architecture: inferAssetArchitecture(asset.name)
-  }));
-
-  if (!userAgent && !keyword) {
-    const firstDownloadable = normalized.find(
-      (asset) => asset.kind === 'binary' || asset.kind === 'source'
-    );
-    return firstDownloadable ? assets[Number(firstDownloadable.id)] : undefined;
-  }
-
-  const recommendation = recommendAsset(normalized, userAgent, keyword);
-  return recommendation.assetId === null
-    ? undefined
-    : assets[Number(recommendation.assetId)];
 }

@@ -115,14 +115,62 @@ function createLargeRepositoryResponse() {
   };
 }
 
-async function mockRepositoryApi(page: Page) {
-  await page.route('**/api/repos/**', (route) =>
-    route.fulfill({
+function toGitHubReleases(response: typeof repositoryResponse) {
+  return response.releases.map((release) => ({
+    id: release.id,
+    name: release.name,
+    tag_name: release.tagName,
+    published_at: release.publishedAt,
+    prerelease: release.prerelease,
+    assets: release.assets
+      .filter((asset) => asset.kind !== 'source')
+      .map((asset) => ({
+        id: asset.id,
+        name: asset.name,
+        browser_download_url: asset.downloadUrl,
+        size: asset.size,
+        download_count: asset.downloadCount,
+        content_type: asset.contentType
+      }))
+  }));
+}
+
+async function mockGitHubApi(
+  page: Page,
+  response: typeof repositoryResponse = repositoryResponse
+) {
+  await page.route('https://api.github.com/repos/**', (route) => {
+    const corsHeaders = {
+      'access-control-allow-headers':
+        'Accept, Authorization, X-GitHub-Api-Version',
+      'access-control-allow-methods': 'GET',
+      'access-control-allow-origin': '*'
+    };
+
+    if (route.request().method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: corsHeaders });
+    }
+
+    const requestUrl = new URL(route.request().url());
+    const isReleasesRequest = requestUrl.pathname.endsWith('/releases');
+    const body = isReleasesRequest
+      ? toGitHubReleases(response)
+      : {
+          name: response.repository.name,
+          full_name: response.repository.fullName,
+          owner: { login: response.repository.owner, avatar_url: '' },
+          default_branch: response.repository.defaultBranch,
+          description: response.repository.description,
+          html_url: response.repository.url
+        };
+
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(repositoryResponse)
-    })
-  );
+      headers: corsHeaders,
+      body: JSON.stringify(body)
+    });
+  });
 }
 
 async function ensureAdvancedSelectionOpen(page: Page) {
@@ -212,7 +260,7 @@ async function observeWebVitals(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await mockRepositoryApi(page);
+  await mockGitHubApi(page);
 });
 
 test('uses Semifold as the example and applies product titles', async ({
@@ -228,9 +276,15 @@ test('uses Semifold as the example and applies product titles', async ({
   );
 });
 
-test('keeps GitHub authentication optional and sends it in a header', async ({
+test('keeps GitHub authentication optional and sends it only to GitHub', async ({
   page
 }) => {
+  const workerRepositoryRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/repos/')) {
+      workerRepositoryRequests.push(request.url());
+    }
+  });
   await page.goto('/');
   await expect(page.getByLabel('GitHub token')).toHaveCount(0);
 
@@ -242,12 +296,28 @@ test('keeps GitHub authentication optional and sends it in a header', async ({
   await tokenInput.fill('github_pat_e2e-token');
   await page.getByLabel('GitHub repository').fill('owner/repo');
 
-  const requestPromise = page.waitForRequest('**/api/repos/**');
+  const requestPromises = [
+    page.waitForRequest(
+      (request) =>
+        request.method() === 'GET' &&
+        request.url() === 'https://api.github.com/repos/owner/repo'
+    ),
+    page.waitForRequest(
+      (request) =>
+        request.method() === 'GET' &&
+        request.url() ===
+          'https://api.github.com/repos/owner/repo/releases?per_page=100'
+    )
+  ];
   await page.getByRole('button', { name: 'Find assets' }).click();
-  const request = await requestPromise;
+  const requests = await Promise.all(requestPromises);
 
-  expect(request.headers()['x-github-token']).toBe('github_pat_e2e-token');
-  expect(request.url()).not.toContain('github_pat_e2e-token');
+  for (const request of requests) {
+    expect(request.headers().authorization).toBe('Bearer github_pat_e2e-token');
+    expect(request.headers()['x-github-token']).toBeUndefined();
+    expect(request.url()).not.toContain('github_pat_e2e-token');
+  }
+  expect(workerRepositoryRequests).toEqual([]);
   await expect(page).not.toHaveURL(/github_pat_e2e-token/);
   await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
 
@@ -278,7 +348,9 @@ test('queries, switches assets, copies and restores URL state', async ({
   await page.getByRole('option', { name: /SourceCode-v2\.0\.0\.zip/ }).click();
 
   await expect(page.getByText('Manual selection')).toBeVisible();
-  await expect(page).toHaveURL(/asset=asset-source/);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('asset'))
+    .toBe('release-2:3:SourceCode-v2.0.0.zip');
 
   await page.getByRole('button', { name: 'Copy proxy link' }).click();
   await expect(page.getByText('Proxy link copied.')).toBeVisible();
@@ -333,14 +405,8 @@ test('starts the selected proxy download', async ({ page }) => {
 test('filters large release and asset collections without leaking search state', async ({
   page
 }) => {
-  await page.unroute('**/api/repos/**');
-  await page.route('**/api/repos/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(createLargeRepositoryResponse())
-    })
-  );
+  await page.unroute('https://api.github.com/repos/**');
+  await mockGitHubApi(page, createLargeRepositoryResponse());
   await page.goto('/?repo=owner%2Frepo');
   await ensureAdvancedSelectionOpen(page);
 
@@ -364,8 +430,12 @@ test('filters large release and asset collections without leaking search state',
     page.getByRole('option', { name: /linux-arm64-search-target/ })
   ).toBeVisible();
   await assetInput.press('Enter');
-  await expect(page).toHaveURL(/asset=asset-17-23/);
-  expect(page.url()).not.toContain('search');
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('asset'))
+    .toBe('release-17:asset-17-23:tool-v17-linux-arm64-search-target.tar.gz');
+  const selectedSearchParams = new URL(page.url()).searchParams;
+  expect(selectedSearchParams.has('search')).toBe(false);
+  expect(selectedSearchParams.has('query')).toBe(false);
 
   const selectedUrl = page.url();
   await assetInput.fill('no-matching-asset');
@@ -375,14 +445,8 @@ test('filters large release and asset collections without leaking search state',
 
 test('keeps both combobox popups within a 320px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 });
-  await page.unroute('**/api/repos/**');
-  await page.route('**/api/repos/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(createLargeRepositoryResponse())
-    })
-  );
+  await page.unroute('https://api.github.com/repos/**');
+  await mockGitHubApi(page, createLargeRepositoryResponse());
   await page.goto('/?repo=owner%2Frepo');
   await ensureAdvancedSelectionOpen(page);
 
@@ -490,7 +554,9 @@ test('supports the core keyboard path', async ({ page }) => {
     page.getByRole('option', { name: /app-windows-x64-v1\.zip/ })
   ).toBeVisible();
   await assetInput.press('Enter');
-  await expect(page).toHaveURL(/asset=asset-legacy/);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('asset'))
+    .toBe('release-1:asset-legacy:app-windows-x64-v1.zip');
 });
 
 test('loads API Markdown only on the lazy docs route', async ({ page }) => {

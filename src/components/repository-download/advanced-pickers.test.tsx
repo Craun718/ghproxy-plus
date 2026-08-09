@@ -102,7 +102,7 @@ describe('ReleasePicker', () => {
 });
 
 describe('AssetList', () => {
-  it('renders grouped metadata and filters assets before selecting an ID', async () => {
+  it('shows every platform until the user searches, then selects by ID', async () => {
     const onSelect = vi.fn();
     const assets = [
       createAsset(
@@ -141,6 +141,9 @@ describe('AssetList', () => {
     expect(
       screen.getByText('tool-windows-x64.zip').closest('[role="option"]')
     ).toHaveTextContent('Windows · X64 · Zip · 1.0 MB · 42 downloads');
+    expect(screen.getByText('tool-linux-arm64.zip')).toBeVisible();
+    expect(screen.getByText('source.zip')).toBeVisible();
+    expect(screen.getByText('checksums.txt')).toBeVisible();
 
     await user.clear(input);
     await user.type(input, 'arm64');

@@ -189,8 +189,9 @@ export function RepositorySearchForm({
                   id={tokenSecurityId}
                   className="text-xs text-foreground/80"
                 >
-                  Forwarded through this deployment to GitHub, kept only in page
-                  memory, and never added to the URL or browser storage.
+                  Sent directly from this browser to GitHub, kept only in page
+                  memory, and never sent to this deployment, the URL, or browser
+                  storage.
                 </FieldDescription>
               </Field>
             </div>

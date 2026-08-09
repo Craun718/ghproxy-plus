@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { RepositoryApiError } from '@/lib/repository-api';
 import {
   createRepositoryDownloadModel,
   selectCurrentAsset,
@@ -89,6 +90,29 @@ describe('repository download model', () => {
 
     expect(fetcher.mock.calls[0]?.[2]).toMatchObject({
       token: 'github_pat_ephemeral-token'
+    });
+    expect(model.getState()).not.toHaveProperty('token');
+  });
+
+  it('keeps invalid-token distinct from generic service errors', async () => {
+    const fetcher = vi
+      .fn()
+      .mockRejectedValue(
+        new RepositoryApiError(
+          'invalid-token',
+          'The GitHub token is invalid or no longer active.',
+          401
+        )
+      );
+    const model = createRepositoryDownloadModel(fetcher);
+
+    await model.getState().resolveRepository('owner/repo', {
+      token: 'github_pat_rejected-token'
+    });
+
+    expect(model.getState().error).toEqual({
+      code: 'invalid-token',
+      message: 'The GitHub token is invalid or no longer active.'
     });
     expect(model.getState()).not.toHaveProperty('token');
   });

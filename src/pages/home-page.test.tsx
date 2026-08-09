@@ -60,26 +60,52 @@ function createResponse(releases: RepositoryRelease[]): RepositoryResponse {
 }
 
 function mockRepositoryResponse(response: RepositoryResponse) {
+  const repository = {
+    name: response.repository.name,
+    full_name: response.repository.fullName,
+    owner: { login: response.repository.owner, avatar_url: '' },
+    default_branch: response.repository.defaultBranch,
+    description: response.repository.description,
+    html_url: response.repository.url
+  };
+  const releases = response.releases.map((release) => ({
+    id: release.id,
+    name: release.name,
+    tag_name: release.tagName,
+    published_at: release.publishedAt,
+    prerelease: release.prerelease,
+    assets: release.assets.map((asset) => ({
+      id: asset.id,
+      name: asset.name,
+      browser_download_url: asset.downloadUrl,
+      size: asset.size,
+      download_count: asset.downloadCount,
+      content_type: asset.contentType
+    }))
+  }));
+
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(response), {
-        status: 200,
-        headers: { 'content-type': 'application/json' }
-      })
+    vi.fn((input: string | URL | Request) =>
+      Promise.resolve(
+        Response.json(
+          String(input).endsWith('/releases?per_page=100')
+            ? releases
+            : repository
+        )
+      )
     )
   );
 }
 
-function mockRepositoryError(status: number, code: string, message: string) {
+function mockGitHubError(status: number, message: string) {
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: { code, message } }), {
-        status,
-        headers: { 'content-type': 'application/json' }
-      })
-    )
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ message }, { status, statusText: 'GitHub error' })
+      )
   );
 }
 
@@ -164,18 +190,20 @@ describe('HomePage release states', () => {
   });
 
   it('shows a dedicated state when no releases exist', async () => {
-    mockRepositoryResponse(createResponse([]));
+    useRepositoryDownloadModel.setState({
+      status: 'empty',
+      error: {
+        code: 'empty-release',
+        message: 'This repository has no releases or downloadable branch.'
+      }
+    });
     render(
       <MemoryRouter>
         <HomePage />
       </MemoryRouter>
     );
 
-    await submitRepository();
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'No releases found'
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('No releases found');
   });
 
   it('makes every release available in advanced selection', async () => {
@@ -232,28 +260,26 @@ describe('HomePage release states', () => {
   });
 
   it('shows a dedicated empty-asset state', async () => {
-    mockRepositoryResponse(
-      createResponse([createRelease('release-1', 'v1.0.0', [])])
-    );
+    useRepositoryDownloadModel.setState({
+      status: 'empty',
+      error: {
+        code: 'empty-asset',
+        message: 'The selected release has no downloadable assets.'
+      }
+    });
     render(
       <MemoryRouter>
         <HomePage />
       </MemoryRouter>
     );
 
-    await submitRepository();
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       'No assets in this release'
     );
   });
 
   it('keeps authentication optional until GitHub rate limits a query', async () => {
-    mockRepositoryError(
-      429,
-      'rate-limit',
-      'GitHub rate limit reached. Add a token and retry.'
-    );
+    mockGitHubError(429, 'GitHub rate limit reached. Add a token and retry.');
     render(
       <MemoryRouter>
         <HomePage />

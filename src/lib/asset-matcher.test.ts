@@ -2,19 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { RepositoryAsset } from '@/models/repository-download-types';
 import {
   classifyAsset,
-  getDownloadAsset,
   inferAssetArchitecture,
   inferAssetPlatform,
   recommendAsset
 } from './asset-matcher';
-import type { GitHubReleaseAsset } from './github-types';
-
-function createGitHubAsset(name: string): GitHubReleaseAsset {
-  return {
-    name,
-    browser_download_url: `https://github.com/example/tool/releases/${name}`
-  };
-}
 
 function createAsset(name: string): RepositoryAsset {
   return {
@@ -76,42 +67,5 @@ describe('recommendAsset', () => {
 
     expect(result.confidence).toBe('none');
     expect(result.assetId).toBeNull();
-  });
-});
-
-describe('getDownloadAsset compatibility API', () => {
-  it('returns an exact keyword match', () => {
-    const assets = [
-      createGitHubAsset('tool-linux-x86_64.tar.gz'),
-      createGitHubAsset('tool-windows-x64.zip')
-    ];
-
-    expect(getDownloadAsset(assets, undefined, 'windows')?.name).toBe(
-      'tool-windows-x64.zip'
-    );
-  });
-
-  it('does not silently select an asset when a keyword has no match', () => {
-    const assets = [
-      createGitHubAsset('tool-linux-x86_64.tar.gz'),
-      createGitHubAsset('tool-windows-x64.zip')
-    ];
-
-    expect(getDownloadAsset(assets, undefined, 'android')).toBeUndefined();
-  });
-
-  it('treats a whitespace-only keyword as no keyword', () => {
-    const assets = [createGitHubAsset('tool-windows-x64.zip')];
-
-    expect(getDownloadAsset(assets, undefined, '   ')).toBeUndefined();
-  });
-
-  it('never recommends checksum or signature files', () => {
-    const assets = [
-      createGitHubAsset('tool.sha256'),
-      createGitHubAsset('tool.tar.gz.asc')
-    ];
-
-    expect(getDownloadAsset(assets, undefined, undefined)).toBeUndefined();
   });
 });

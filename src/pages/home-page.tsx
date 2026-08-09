@@ -39,7 +39,7 @@ const errorTitles: Record<RepositoryErrorCode, string> = {
   network: 'Network connection failed',
   'empty-release': 'No releases found',
   'empty-asset': 'No assets in this release',
-  server: 'Repository service unavailable'
+  server: 'GitHub service unavailable'
 };
 
 export default function HomePage() {
@@ -135,8 +135,7 @@ export default function HomePage() {
         <CardHeader>
           <CardTitle>Choose a repository</CardTitle>
           <CardDescription>
-            Validation happens before a request is sent to the repository
-            service.
+            Validation happens before your browser contacts GitHub.
           </CardDescription>
         </CardHeader>
         <CardContent>

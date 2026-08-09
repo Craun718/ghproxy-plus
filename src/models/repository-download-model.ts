@@ -66,6 +66,7 @@ const initialState = {
 function normalizeError(error: unknown): RepositoryError {
   if (error instanceof RepositoryApiError) {
     const supportedCodes: RepositoryErrorCode[] = [
+      'invalid-token',
       'not-found',
       'rate-limit',
       'network',
