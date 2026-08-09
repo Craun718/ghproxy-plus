@@ -132,6 +132,7 @@ function httpHandler(req: HonoRequest, pathname: string) {
 
   try {
     const urlObj = new URL(urlStr);
+    const originalFilename = getOriginalFilename(urlObj);
 
     // 根据Content-Type获取请求体
     let body: Promise<string> | null = null;
@@ -146,13 +147,76 @@ function httpHandler(req: HonoRequest, pathname: string) {
       body: body
     } as RequestInit;
 
-    return proxy(urlObj, reqInit);
+    return proxy(urlObj, reqInit, originalFilename);
   } catch {
     return new Response('bad url', { status: 400 });
   }
 }
 
-async function proxy(urlObj: URL, reqInit: RequestInit) {
+function getOriginalFilename(url: URL): string | null {
+  const hostname = url.hostname.toLowerCase();
+  const isGithubFile =
+    hostname === 'github.com' &&
+    /\/(?:releases\/download|archive|blob|raw)\//i.test(url.pathname);
+  const isRawFile = /^(?:raw|gist)\.(?:githubusercontent|github)\.com$/i.test(
+    hostname
+  );
+
+  if (!isGithubFile && !isRawFile) return null;
+
+  const pathSegments = url.pathname.split('/');
+  const encodedFilename = pathSegments[pathSegments.length - 1];
+  if (!encodedFilename) return null;
+
+  try {
+    return decodeURIComponent(encodedFilename);
+  } catch {
+    return 'download';
+  }
+}
+
+function sanitizeFilename(filename: string): string {
+  const sanitized = Array.from(filename.normalize('NFC'))
+    .slice(0, 180)
+    .filter((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint >= 0x20 && codePoint !== 0x7f && character !== '"';
+    })
+    .join('')
+    .replace(/[/\\:]/g, '_')
+    .trim();
+
+  if (!sanitized || sanitized === '.' || sanitized === '..') {
+    return 'download';
+  }
+
+  return sanitized;
+}
+
+function encodeRfc5987Value(filename: string): string {
+  return encodeURIComponent(filename).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+export function createDownloadContentDisposition(filename: string): string {
+  const safeFilename = sanitizeFilename(filename);
+  const asciiFilename = Array.from(safeFilename)
+    .map((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint >= 0x20 && codePoint <= 0x7e ? character : '_';
+    })
+    .join('');
+
+  return `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeRfc5987Value(safeFilename)}`;
+}
+
+async function proxy(
+  urlObj: URL,
+  reqInit: RequestInit,
+  originalFilename: string | null
+) {
   let res: Response;
   try {
     res = await fetch(urlObj.href, reqInit);
@@ -175,11 +239,24 @@ async function proxy(urlObj: URL, reqInit: RequestInit) {
         const u = new URL(_location);
         if (u) {
           reqInit.redirect = 'follow';
-          return proxy(u, reqInit);
+          return proxy(u, reqInit, originalFilename);
         }
       }
     }
   }
+
+  const isSuccessfulDownload =
+    originalFilename !== null &&
+    (reqInit.method === 'GET' || reqInit.method === 'HEAD') &&
+    status >= 200 &&
+    status < 300;
+  if (isSuccessfulDownload) {
+    resHdrNew.set(
+      'content-disposition',
+      createDownloadContentDisposition(originalFilename)
+    );
+  }
+
   resHdrNew.set('access-control-expose-headers', '*');
   resHdrNew.set('access-control-allow-origin', '*');
 

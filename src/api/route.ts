@@ -8,7 +8,7 @@ const apiRouter = new Hono();
 
 apiRouter.get('/ping', pingApi);
 apiRouter.get('/download/*', downloadApi);
-apiRouter.get('/ghproxy/*', ghproxyApi);
+apiRouter.on(['GET', 'HEAD'], '/ghproxy/*', ghproxyApi);
 apiRouter.get('/repos/:owner/:repo/releases', repositoryApi);
 
 export default apiRouter;
