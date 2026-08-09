@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；Input Group 图标定位回归修复已完成
+- 状态：当前工作区权威方案（Source of Truth）；Craun718 上游选择性同步已规划
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -33,6 +33,28 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - 缺少核心逻辑单元测试、组件测试和端到端测试。
 
 因此，采用“保留代理后端、重建前端应用层与数据边界”的方案。
+
+### 1.1 上游迁移与同步边界
+
+原仓库与 `https://github.com/Craun718/ghproxy-plus` 从提交 `a68ed3e` 后形成了两条
+开发线。当前工作区的前端重构、架构、组件、样式、数据模型和测试是唯一实施基线；
+不得把 `Craun718/main` 的旧前端源码、依赖清单或组件树整体合并回来。
+
+选择性同步以 `Craun718/main` 的 `1741aa3` 为审查基线，只迁移仍有价值的产品行为：
+
+- 仓库归属与面向用户的源码链接改为 `Craun718/ghproxy-plus`。
+- 吸收 `00ee5b9` 与 `c88a72e` 的下载响应意图：强制附件下载，并在 GitHub CDN
+  重定向后保留原始 URL 的文件名；具体实现必须重新做安全编码和自动化测试，不能
+  直接复制未经清理的 header 拼接代码。
+- 吸收 `1741aa3` 的可搜索 Release/Asset 选择能力，但使用当前 Luma + Base UI
+  架构重新实现。单 Release、完整 Release 列表和不可靠匹配问题已经由当前模型解决，
+  不重复移植旧状态逻辑。
+
+以下上游变化不属于本轮同步：Radix/new-york 组件树、Tabler 图标迁移、旧的单文件
+页面与浏览器直连 GitHub API、sessionStorage 缓存、双锁文件、camelCase 文件、自动
+修复并推送的 CI、排除 shadcn/ui 的 Biome 配置、pre-commit 和纯格式化提交。
+`wrangler.jsonc` 的 Worker 名称暂时保持 `gpp-hono`；改为
+`ghproxy-plus-backend` 会改变部署目标，只有用户明确批准部署迁移后才能实施。
 
 ## 2. 产品目标
 
@@ -132,7 +154,8 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 
 主页按以下顺序组织：
 
-1. 精简 Header：品牌、`API Docs`、GitHub 链接和可选服务状态。
+1. 精简 Header：品牌、`API Docs`、指向 `Craun718/ghproxy-plus` 的 GitHub 链接和
+   可选服务状态。
 2. 任务标题：说明“粘贴仓库地址，获取适合当前设备的 Release 资产”。
 3. 仓库搜索表单：支持仓库 URL、`owner/repo` 和 Release URL。
 4. 仓库摘要：名称、描述、当前版本、发布日期和仓库链接。
@@ -190,6 +213,15 @@ Drawer 承载桌面端长文档。
 - Release 名称为空时回退到 `tag_name`。
 - 资产列表展示平台、架构、格式、大小和下载量，而不是只有文件名。
 - 当前推荐项在列表中有明确标记。
+- Release 与资产搜索使用 shadcn/ui 官方 Base UI
+  [Combobox](https://ui.shadcn.com/docs/components/base/combobox)，通过正式 CLI 生成
+  `src/components/ui/combobox.tsx`。不得移植上游 Radix `Command + Popover` 组合。
+- Release Combobox 对名称和 tag 检索，选择值继续使用稳定 Release ID；Asset
+  Combobox 使用官方 groups、collection 与 custom item 组合，保留 binary、source、
+  checksum/signature 分组以及平台、架构、格式、大小和下载量。
+- 搜索关键字、弹层开关和高亮项属于组件局部 UI 状态，不进入 Zustand、URL 或
+  持久化存储；过滤结果必须由当前 releases/assets 派生，不新增重复列表状态。
+- 空搜索结果只显示明确的 empty message，不得改变现有 Release、Asset 或推荐结果。
 - 触屏目标至少 44 x 44 CSS pixels。
 - 小屏幕上的主次操作纵向排列，不能依赖横向挤压。
 
@@ -330,6 +362,18 @@ GET /api/repos/:owner/:repo/releases
 前端只依赖项目自己的响应模型。资产推荐算法保持为纯函数，输出资产、匹配理由、
 置信度和命中的关键词。零命中必须返回 `none`，不得回退为数组最后一项。
 
+`/api/ghproxy/` 的下载响应额外遵循：
+
+- 对成功的 GET/HEAD 文件响应设置 `Content-Disposition: attachment`，使浏览器和命令
+  行客户端都获得稳定的下载语义。
+- 在首次解析 GitHub URL 时保存原始路径文件名，并在所有受支持的 CDN 重定向中继续
+  传递；不得使用最终 CDN URL 的内部对象名覆盖它。
+- 文件名必须去除路径分隔符、控制字符、引号和 header 注入字符。响应同时提供安全
+  的 ASCII `filename` fallback 与 RFC 5987 UTF-8 `filename*`；解码失败时回退到
+  上游安全文件名或通用名称。
+- 保留上游状态码、`Content-Type`、`Content-Length`、range 与缓存相关 header；除
+  `Content-Disposition` 和现有安全/CORS 处理外，不得改写文件内容或下载协议。
+
 ## 7. 可访问性、响应式与性能
 
 - 所有字段有程序化关联的 label、description 和 error message。
@@ -351,9 +395,15 @@ GET /api/repos/:owner/:repo/releases
 - 模型测试：状态转换、请求竞态、URL 恢复、错误归一化。
 - API/模型测试：Token 请求头转发、认证错误、带 Token 请求绕过缓存，且模型不保存
   Token。
+- 代理 API 测试：直接文件、多跳 CDN 重定向、百分号/Unicode 文件名、恶意 header
+  字符、GET/HEAD 与 range 响应的 `Content-Disposition` 和原 header 保留行为。
 - 组件测试：0、1、多个 Release，空资产，Clipboard 拒绝，Token 折叠与限流展开。
+- 组件测试：Release/Asset Combobox 搜索、空结果、分组、自定义元数据、选择后 URL
+  同步，以及搜索状态不进入 Zustand。
 - E2E：桌面和移动端查询、推荐、手动切换、下载、复制和刷新恢复。
 - E2E：Token 查询请求头、`noctisynth/semifold` 示例、320px Token 展开态无溢出。
+- E2E：大量 Release/Asset 下的筛选、键盘选择、清空/无结果、下载文件名，以及
+  320px Combobox 弹层无水平溢出。
 - 可访问性：键盘路径和自动化 axe 检查。
 
 ### 8.2 CI 门禁
@@ -431,6 +481,20 @@ pnpm build
 - P4：复核 1440px 与 320px Token 展开态截图，通过全部质量门禁后同步本文档和
   `TODO.md` 的完成状态。
 
+### P7：Craun718 上游选择性同步（待实施）
+
+- P0：将应用 Header、Footer、README 与部署入口中的 canonical repository 统一为
+  `https://github.com/Craun718/ghproxy-plus`；保留当前前端源码和全部强制技术决策。
+- P1：先为原始文件名、附件下载、重定向、编码和 header 注入建立失败测试，再在
+  `src/api/ghproxy.ts` 安全实现 `Content-Disposition`，不直接 cherry-pick 上游实现。
+- P2：通过正式 shadcn/ui CLI 增加 Base UI Combobox，以当前 Zustand 模型和 URL
+  状态为数据源重做 Release/Asset 搜索；删除因此不再使用的 Select 原语和样式。
+- P3：补齐组件、E2E、axe、320px、bundle 与下载协议回归，运行全部质量门禁和
+  Wrangler dry-run；若完整 Combobox 样式超过现有 110,000-byte CSS 预算，必须停下
+  请求批准，不得隐式提高预算。
+- P4：同步 README、本文档和 `TODO.md`，并在不覆盖新仓库 `main` 的前提下另行确认
+  Git remote/分支迁移方式。Worker 名称变更不随本轮代码自动实施。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -452,6 +516,12 @@ pnpm build
 - GitHub 与 Key 前置 addon 在桌面和移动端都必须位于对应输入文字左侧；Token
   显示/隐藏按钮必须位于输入文字右侧。实现保持 addon 在 input 后的官方 DOM 顺序，
   并由 `align` 与 Tailwind flex order utility 控制视觉位置。
+- 应用与文档不再包含 `NtskwK/ghproxy-plus` canonical 链接；所有面向用户的源码和
+  部署入口指向 `Craun718/ghproxy-plus`。
+- GitHub 代理下载在直接响应和 CDN 重定向后都使用安全的原始文件名，并强制附件
+  下载；Unicode 与恶意文件名不会造成乱码、路径逃逸或 header 注入。
+- Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL
+  恢复和 Zustand 单向状态流；单 Release 仍可下载，空搜索不会改变选择。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
 - README、`DESIGN.md`、`TODO.md` 与实际实现一致。
 
