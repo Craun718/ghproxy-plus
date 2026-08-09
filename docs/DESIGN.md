@@ -2,8 +2,8 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；Craun718 上游选择性同步已完成
-- 最近更新：2026-08-09
+- 状态：当前工作区权威方案（Source of Truth）；PR #2 review 修订实施中
+- 最近更新：2026-08-10
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -27,7 +27,8 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - 资产匹配在零关键词命中时仍可能返回列表中的最后一个资产。
 - Zod 校验没有连接到实际表单提交流程。
 - URL 只回填仓库输入，不会恢复查询结果、版本和资产选择。
-- 浏览器直接访问 GitHub API，绕过服务端缓存和统一错误处理。
+- Cloudflare Worker 匿名访问 GitHub API 会共享出口限额，实际预览环境无法稳定完成
+  默认查询流程。
 - 组件、依赖和业务规模失衡，当前包含大量未使用的 shadcn/ui 组件和依赖。
 - 当前依赖目录与清单不一致，类型检查和本地预览不能稳定通过。
 - 缺少核心逻辑单元测试、组件测试和端到端测试。
@@ -83,7 +84,8 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - 推荐结果显示平台、架构、格式、大小、版本及推荐原因。
 - 仓库、版本、资产选择可以通过 URL 分享并在刷新后恢复。
 - 手机、桌面、键盘和屏幕阅读器用户都能完成核心流程。
-- 前端不直接依赖 GitHub API 的原始响应结构。
+- GitHub API 原始响应只允许进入客户端 API/归一化层，组件与 Zustand 模型不得直接
+  依赖原始字段结构。
 - GitHub 匿名 API 额度不足时，用户可以临时提供 Token 后重试，不影响默认 URL
   查询主流程。
 - 开发环境、构建、类型检查和测试可重复执行。
@@ -177,7 +179,8 @@ Drawer 承载桌面端长文档。
   Token 控件打断。
 - GitHub 返回限流错误时，自动展开 Token 区域，并在错误信息中提供重试指引。
 - Token 输入使用密码控件，建议用户使用只有公开仓库只读权限的 fine-grained
-  Token，并明确说明 Token 会经当前部署转发给 GitHub。
+  Token，并明确说明浏览器会把 Token 直接发送给 GitHub API，当前部署不会接收、
+  转发或保存 Token。
 - Token 仅保存在当前页面的 React 局部状态中。不得写入 URL、Zustand、
   localStorage、sessionStorage、Cookie、日志或分析事件；刷新或离开页面后即丢弃。
 - 无 Token 时的现有查询、URL 恢复和分享行为保持不变；从分享 URL 自动恢复查询时
@@ -295,8 +298,9 @@ src/
 - `components/` 下的业务子目录包含面向用户任务的组合组件。
 - `hooks/` 包含可复用的 React 行为和 URL 同步逻辑。
 - `models/` 包含领域类型、Zod schema、Zustand store、actions 和 selectors。
-- `lib/` 包含 shadcn 工具函数、API client、响应转换和无副作用的匹配算法；API
-  模块不得持有 React 或 Zustand 状态。
+- `lib/` 包含 shadcn 工具函数、浏览器 GitHub API client、响应转换和无副作用的
+  匹配算法；API 模块不得持有 React 或 Zustand 状态，原始 GitHub 响应不得越过
+  该层进入组件。
 - `pages/` 只负责路由级页面组合，保留 Farm SPA 的框架边界。
 - 不为了抽象形式新增 `app/`、`features/`、`services/` 或其他 shadcn/ui 未要求且
   当前规模不需要的顶层目录。
@@ -337,31 +341,41 @@ GitHub Token 是敏感的临时表单值，不属于共享领域状态。模型 
 
 ## 6. 数据与后端边界
 
-新增归一化的仓库查询端点，建议为：
+### 6.1 浏览器 GitHub 查询
+
+PR #2 的 Cloudflare 预览环境已经验证：匿名 GitHub API 请求经 Worker 发出时会命中
+共享出口限额并返回 429。仓库元数据和 Release 查询因此必须由浏览器直接请求：
 
 ```text
-GET /api/repos/:owner/:repo/releases
+GET https://api.github.com/repos/:owner/:repo
+GET https://api.github.com/repos/:owner/:repo/releases?per_page=100
 ```
 
-端点负责：
+- `src/lib/repository-api.ts` 是唯一允许访问这些端点和接触 GitHub 原始响应的客户端
+  边界，负责请求、源码资产补全、默认分支回退、归一化和稳定错误映射。
+- 组件和 Zustand 模型只依赖项目自己的 `RepositoryResponse`，不得读取 GitHub 原始
+  字段或自行发送 GitHub 请求。
+- 匿名查询使用浏览器所在网络的 GitHub 限额；本轮不新增持久缓存，当前查询结果只
+  保存在 Zustand 内存状态中。
+- 可选 Token 仅通过浏览器请求的 `Authorization: Bearer …` 发送给
+  `api.github.com`，不得发送给当前 Worker，也不得进入 URL、Zustand、浏览器存储、
+  Cookie、日志或分析事件。
+- 请求统一发送 GitHub media type 与 API version header。GitHub `401` 映射为
+  `invalid-token`，`403`/`429` 映射为 `rate-limit`，`404` 映射为 `not-found`，网络
+  与其他服务错误保持可恢复且不得回显 Token。
+- 同源 `/api/repos/:owner/:repo/releases` 端点与相关 Worker LRU 缓存必须删除，避免
+  留下一个默认不可用且可能误收 Token 的入口。
 
-- 请求 GitHub API。
-- 服务端缓存和限流反馈。
-- 将空名称、源码资产、校验文件和可下载资产归一化。
-- 返回稳定的错误 code，而不是把 GitHub 原始错误对象直接交给页面。
-- 保留代理下载 URL 的生成规则，但不提前启动下载。
+资产推荐算法保持为纯函数，输出资产、匹配理由、置信度和命中的关键词。零命中必须
+返回 `none`，不得回退为数组最后一项。设备信息只影响推荐，不得过滤高级选择中的
+其他平台、架构、源码或校验文件；只有用户在 Asset Combobox 主动输入搜索词时才可
+缩小当前可见结果。
 
-仓库查询端点额外接受可选的 `X-GitHub-Token` 请求头：
+### 6.2 Worker 下载边界
 
-- Worker 校验其基本长度后只通过 `Authorization: Bearer …` 转发给 GitHub API。
-- Token 不得出现在上游 URL、错误响应或日志中。
-- 携带 Token 的请求必须绕过并且不得写入按仓库共享的内存缓存，响应使用
-  `Cache-Control: private, no-store`。
-- 匿名请求继续使用现有短时共享缓存。
-- GitHub `401` 映射为稳定的 `invalid-token` 错误；限流仍映射为 `rate-limit`。
-
-前端只依赖项目自己的响应模型。资产推荐算法保持为纯函数，输出资产、匹配理由、
-置信度和命中的关键词。零命中必须返回 `none`，不得回退为数组最后一项。
+旧 `/api/download/:github-repository-url` 需要 Worker 查询 GitHub Release 后替用户
+选择资产，与上述可靠性约束冲突，因此连同专用处理器和文档一起退役。页面使用浏览器
+已经取得的归一化资产生成 `/api/ghproxy/` URL，不再依赖该兼容入口。
 
 `/api/ghproxy/` 的下载响应额外遵循：
 
@@ -394,15 +408,16 @@ GET /api/repos/:owner/:repo/releases
 
 - 单元测试：URL 解析、资产过滤、匹配置信度、代理 URL 生成。
 - 模型测试：状态转换、请求竞态、URL 恢复、错误归一化。
-- API/模型测试：Token 请求头转发、认证错误、带 Token 请求绕过缓存，且模型不保存
-  Token。
+- API/模型测试：浏览器 GitHub 请求、默认分支回退、认证与限流错误、Token 仅进入
+  GitHub `Authorization` header，且模型不保存 Token。
 - 代理 API 测试：直接文件、多跳 CDN 重定向、百分号/Unicode 文件名、恶意 header
   字符、GET/HEAD 与 range 响应的 `Content-Disposition` 和原 header 保留行为。
 - 组件测试：0、1、多个 Release，空资产，Clipboard 拒绝，Token 折叠与限流展开。
 - 组件测试：Release/Asset Combobox 搜索、空结果、分组、自定义元数据、选择后 URL
   同步，以及搜索状态不进入 Zustand。
 - E2E：桌面和移动端查询、推荐、手动切换、下载、复制和刷新恢复。
-- E2E：Token 查询请求头、`noctisynth/semifold` 示例、320px Token 展开态无溢出。
+- E2E：浏览器 GitHub 查询与 Token `Authorization` header、`noctisynth/semifold`
+  示例、320px Token 展开态无溢出，并确认 Token 不发送给 Worker。
 - E2E：大量 Release/Asset 下的筛选、键盘选择、清空/无结果、下载文件名，以及
   320px Combobox 弹层无水平溢出。
 - 可访问性：键盘路径和自动化 axe 检查。
@@ -497,6 +512,16 @@ pnpm build
 - P4：同步 README、本文档和 `TODO.md`，并在不覆盖新仓库 `main` 的前提下另行确认
   Git remote/分支迁移方式。真实 Cloudflare 部署与现有环境资源迁移仍需单独授权。
 
+### P8：PR #2 review 修订（实施中）
+
+- P0：将仓库与 Release 查询迁移到浏览器 GitHub API client，保持归一化响应、
+  Zustand 单向状态流、竞态取消和 URL 恢复；Token 只直接发送给 GitHub。
+- P1：删除 Worker `/api/repos/:owner/:repo/releases`、LRU 仓库查询缓存及旧
+  `/api/download/:github-repository-url`，保留 `/api/ghproxy/` 下载代理。
+- P2：确保设备探测只用于推荐，Asset Combobox 默认展示全部平台和类型；补齐浏览器
+  查询、Token、错误映射、全部资产可见性和 E2E 回归。
+- P3：同步 README、API Docs、本文档和 `TODO.md`，通过全部质量门禁后推送 PR #2。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -508,8 +533,8 @@ pnpm build
 - CSS 仅使用 Tailwind CSS 和允许的全局 token/base 规则。
 - Biome 以单引号、space、2 spaces 检查全部目标代码。
 - 核心流程覆盖 0、1、多个 Release 及所有规定错误状态。
-- 匿名查询仍是默认路径；Token 只能临时传递，认证失败可恢复且不会进入持久化或
-  共享缓存。
+- 匿名浏览器查询仍是默认路径；Token 只能由浏览器临时直接传递给 GitHub，认证失败
+  可恢复且不会进入 Worker、Zustand 或持久化存储。
 - 首页示例为 `noctisynth/semifold`，导航显示 `API Docs`，浏览器标题为
   `GitHub Proxy Plus`。
 - 320px 以上视口在 Token 收起和展开状态均无水平溢出。
@@ -525,14 +550,17 @@ pnpm build
 - GitHub 代理下载在直接响应和 CDN 重定向后都使用安全的原始文件名，并强制附件
   下载；Unicode 与恶意文件名不会造成乱码、路径逃逸或 header 注入。
 - Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL
-  恢复和 Zustand 单向状态流；单 Release 仍可下载，空搜索不会改变选择。
+  恢复和 Zustand 单向状态流；设备匹配不隐藏其他资产，单 Release 仍可下载，空搜索
+  不会改变选择。
+- 浏览器直接请求 GitHub Repository/Releases API，Worker 不再暴露 `/api/repos` 或
+  `/api/download`；组件与 Zustand 仍只接收归一化的项目响应模型。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
 - README、`DESIGN.md`、`TODO.md` 与实际实现一致。
 
 ## 11. 当前实施基线
 
-本轮方案于 2026-08-09 完成落地。后续需求仍必须先更新本文件，再从根目录
-`TODO.md` 派生尚未实施事项。
+Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review 和预览环境
+429 证据批准 P8 数据边界修订；修订实施状态由根目录 `TODO.md` 跟踪。
 
 当前基线：
 
@@ -550,11 +578,11 @@ pnpm build
   `inline-end`；三者保持在 input 后的官方 DOM 顺序，并由 E2E 校验实际视觉位置。
 - `src/models/repository-download-model.ts` 管理异步状态、请求取消、竞态保护和选择；
   URL 通过单一 hook 恢复并 replace 同步 `repo`、`release` 和 `asset`。
-- `/api/repos/:owner/:repo/releases` 统一访问 GitHub、执行内存缓存、默认分支回退、
-  数据归一化和稳定错误映射；前端不再直接请求 GitHub API。
-- 仓库查询表单提供折叠的临时 GitHub Token 输入；Token 只存在于页面局部状态并
-  通过同源请求头传递，带 Token 的请求绕过共享缓存、使用 `private, no-store`，
-  无效 Token 映射为 `invalid-token`，限流时自动展开认证区域。Token disclosure 为
+- P8 完成后，`src/lib/repository-api.ts` 由浏览器直接访问 GitHub、执行默认分支回退、
+  数据归一化和稳定错误映射；Worker 仓库查询与 LRU 缓存退出运行路径。
+- 仓库查询表单提供折叠的临时 GitHub Token 输入；Token 只存在于页面局部状态并由
+  浏览器直接发送给 GitHub API，不经过当前 Worker。无效 Token 映射为
+  `invalid-token`，限流时自动展开认证区域。Token disclosure 为
   轻量辅助操作，展开后使用单层 muted surface 和带显示/隐藏操作的密码 Input Group。
 - `/docs` 使用路由懒加载，Worker 静态资源启用 SPA fallback，主页不加载 API
   Markdown。
