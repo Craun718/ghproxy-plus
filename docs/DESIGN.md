@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；Craun718 上游选择性同步已规划
+- 状态：当前工作区权威方案（Source of Truth）；Craun718 上游选择性同步实施中
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -521,7 +521,7 @@ pnpm build
 - 应用与文档不再包含 `NtskwK/ghproxy-plus` canonical 链接；所有面向用户的源码和
   部署入口指向 `Craun718/ghproxy-plus`。
 - `wrangler.jsonc` 的 Worker 名称为 `ghproxy-plus-backend`，Wrangler dry-run 能以该
-  名称完成配置解析；仓库不得继续声明旧名称 `gpp-hono`。
+  名称完成配置解析；Wrangler 配置不得继续使用旧名称 `gpp-hono`。
 - GitHub 代理下载在直接响应和 CDN 重定向后都使用安全的原始文件名，并强制附件
   下载；Unicode 与恶意文件名不会造成乱码、路径逃逸或 header 注入。
 - Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL
@@ -538,6 +538,8 @@ pnpm build
 
 - Node.js 支持版本为 22 及以上，包管理器固定为 pnpm 11.9.0；仓库仅保留
   `pnpm-lock.yaml`。
+- Cloudflare Worker 名称为 `ghproxy-plus-backend`，构建和 Wrangler dry-run 已通过；
+  真实部署、自定义域、变量、路由和其他 Cloudflare 环境资源迁移尚未执行。
 - shadcn/ui 使用 `base-luma` 风格与 Base UI 原语；业务实际使用的通用原语保留在
   `src/components/ui/`，Radix 目标组件和未使用组件已移除。搜索表单使用官方 CLI
   生成并经 Biome 审查的 `Field`、`InputGroup`、`Collapsible`、`Button` 和 `Badge`
