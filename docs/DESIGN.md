@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；本轮重构已实施并通过验收
+- 状态：当前工作区权威方案（Source of Truth）；可靠性与产品文案后续任务实施中
 - 最近更新：2026-08-09
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -61,12 +61,16 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - 仓库、版本、资产选择可以通过 URL 分享并在刷新后恢复。
 - 手机、桌面、键盘和屏幕阅读器用户都能完成核心流程。
 - 前端不直接依赖 GitHub API 的原始响应结构。
+- GitHub 匿名 API 额度不足时，用户可以临时提供 Token 后重试，不影响默认 URL
+  查询主流程。
 - 开发环境、构建、类型检查和测试可重复执行。
 
 ### 2.3 非目标
 
 - 不在本轮重写 `/api/ghproxy/` 的代理传输实现。
 - 不引入账号、收藏、下载历史同步或服务端持久化。
+- GitHub Token 只用于提高 GitHub API 查询额度；本轮不承诺私有仓库浏览能力，
+  不保存、同步或代管用户凭据。
 - 不为了展示组件库能力而增加与下载任务无关的交互。
 - 不改变当前品牌色调和语义色值。
 
@@ -128,7 +132,7 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 
 主页按以下顺序组织：
 
-1. 精简 Header：品牌、API 文档、GitHub 链接和可选服务状态。
+1. 精简 Header：品牌、`API Docs`、GitHub 链接和可选服务状态。
 2. 任务标题：说明“粘贴仓库地址，获取适合当前设备的 Release 资产”。
 3. 仓库搜索表单：支持仓库 URL、`owner/repo` 和 Release URL。
 4. 仓库摘要：名称、描述、当前版本、发布日期和仓库链接。
@@ -139,7 +143,23 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 API 文档迁移为独立 `/docs` 页面，不再在主页初始化时下载 Markdown，也不使用底部
 Drawer 承载桌面端长文档。
 
-### 4.2 推荐资产
+浏览器文档标题固定为 `GitHub Proxy Plus`。主页空状态使用
+`noctisynth/semifold` 作为可点击示例仓库。
+
+### 4.2 仓库查询与可选 Token
+
+- 仓库 URL 输入和“Find assets”操作始终是首要交互。
+- GitHub Token 放在搜索表单内的折叠“可选认证”区域；匿名查询或正常结果不应被
+  Token 控件打断。
+- GitHub 返回限流错误时，自动展开 Token 区域，并在错误信息中提供重试指引。
+- Token 输入使用密码控件，建议用户使用只有公开仓库只读权限的 fine-grained
+  Token，并明确说明 Token 会经当前部署转发给 GitHub。
+- Token 仅保存在当前页面的 React 局部状态中。不得写入 URL、Zustand、
+  localStorage、sessionStorage、Cookie、日志或分析事件；刷新或离开页面后即丢弃。
+- 无 Token 时的现有查询、URL 恢复和分享行为保持不变；从分享 URL 自动恢复查询时
+  不携带 Token。
+
+### 4.3 推荐资产
 
 推荐资产区域必须显示：
 
@@ -154,7 +174,7 @@ Drawer 承载桌面端长文档。
 `none` 表示没有可靠匹配，此时不预选下载项，用户必须手动确认。Source Code 与
 可执行资产分组展示，校验和及签名文件不参与默认推荐。
 
-### 4.3 高级选择
+### 4.4 高级选择
 
 - Release 选择不限制为前 5 个；列表可以搜索或渐进加载。
 - Release 名称为空时回退到 `tag_name`。
@@ -163,7 +183,7 @@ Drawer 承载桌面端长文档。
 - 触屏目标至少 44 x 44 CSS pixels。
 - 小屏幕上的主次操作纵向排列，不能依赖横向挤压。
 
-### 4.4 状态和错误反馈
+### 4.5 状态和错误反馈
 
 页面状态定义为：
 
@@ -179,6 +199,8 @@ idle -> validating -> loading -> ready
 - `ready`：展示仓库、推荐资产和高级选择。
 - `empty`：区分无 Release、Release 无资产和仅有源码。
 - `error`：区分格式错误、仓库不存在、GitHub 限流、网络错误和服务错误。
+
+无效或被撤销的 Token 必须与匿名限流区分，提供可恢复的认证错误，不得回显 Token。
 
 错误文案不得都使用“Failed to fetch releases”。Clipboard 被拒绝或下载启动失败时，
 必须在对应操作附近提供可恢复反馈；Toast 只能作为补充，不能承载唯一结果。
@@ -254,6 +276,9 @@ src/
 不得同时保存可以从现有状态推导的 `tagList`、`assetList` 等重复数组。URL 状态与
 Zustand 模型必须有单向、可测试的同步入口，禁止多个 effect 相互覆盖选择。
 
+GitHub Token 是敏感的临时表单值，不属于共享领域状态。模型 action 可以接收它作为
+单次查询参数，但不得把它存入 Zustand state。
+
 ### 5.3 URL 状态
 
 目标 URL：
@@ -283,6 +308,15 @@ GET /api/repos/:owner/:repo/releases
 - 返回稳定的错误 code，而不是把 GitHub 原始错误对象直接交给页面。
 - 保留代理下载 URL 的生成规则，但不提前启动下载。
 
+仓库查询端点额外接受可选的 `X-GitHub-Token` 请求头：
+
+- Worker 校验其基本长度后只通过 `Authorization: Bearer …` 转发给 GitHub API。
+- Token 不得出现在上游 URL、错误响应或日志中。
+- 携带 Token 的请求必须绕过并且不得写入按仓库共享的内存缓存，响应使用
+  `Cache-Control: private, no-store`。
+- 匿名请求继续使用现有短时共享缓存。
+- GitHub `401` 映射为稳定的 `invalid-token` 错误；限流仍映射为 `rate-limit`。
+
 前端只依赖项目自己的响应模型。资产推荐算法保持为纯函数，输出资产、匹配理由、
 置信度和命中的关键词。零命中必须返回 `none`，不得回退为数组最后一项。
 
@@ -292,7 +326,9 @@ GET /api/repos/:owner/:repo/releases
 - Base UI 组件必须保留其键盘、焦点和 ARIA 能力。
 - 焦点样式清晰可见；不得只依赖颜色表示推荐、错误或选择状态。
 - 加载状态使用 `aria-live` 或等效语义；图标装饰正确设置为隐藏。
-- 支持 320px 以上视口，重点验证 390px、768px、1280px 和 1440px。
+- 支持 320px 以上视口，重点验证 320px、390px、768px、1280px 和 1440px。
+- 搜索主操作和 Token 高级区域在窄屏下纵向排列、占满可用宽度，不得产生水平
+  滚动；触屏目标继续保持至少 44 x 44 CSS pixels。
 - API 文档按路由懒加载。
 - 删除未使用组件与依赖，并在可构建基线恢复后建立初始包体预算。
 - 目标 Web Vitals：LCP < 2.5s、CLS < 0.1、INP < 200ms（第 75 百分位）。
@@ -303,8 +339,11 @@ GET /api/repos/:owner/:repo/releases
 
 - 单元测试：URL 解析、资产过滤、匹配置信度、代理 URL 生成。
 - 模型测试：状态转换、请求竞态、URL 恢复、错误归一化。
-- 组件测试：0、1、多个 Release，空资产，Clipboard 拒绝。
+- API/模型测试：Token 请求头转发、认证错误、带 Token 请求绕过缓存，且模型不保存
+  Token。
+- 组件测试：0、1、多个 Release，空资产，Clipboard 拒绝，Token 折叠与限流展开。
 - E2E：桌面和移动端查询、推荐、手动切换、下载、复制和刷新恢复。
+- E2E：Token 查询请求头、`noctisynth/semifold` 示例、320px Token 展开态无溢出。
 - 可访问性：键盘路径和自动化 axe 检查。
 
 ### 8.2 CI 门禁
@@ -351,6 +390,14 @@ pnpm build
 - 完成 E2E、可访问性、性能预算和发布回归验证。
 - 同步 README、部署说明和最终架构文档。
 
+### P4：查询可靠性与产品文案后续
+
+- P0：实现临时 GitHub Token 的安全传递、无缓存查询、错误反馈和自动展开交互。
+- P1：将首页示例切换为 `noctisynth/semifold`，统一 `API Docs` 文案和
+  `GitHub Proxy Plus` 浏览器标题。
+- P2：补齐 320px 与 Token 展开态的组件、E2E、键盘和 axe 回归。
+- P3：通过全部质量门禁并同步本文档和 `TODO.md` 的实施状态。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -362,6 +409,11 @@ pnpm build
 - CSS 仅使用 Tailwind CSS 和允许的全局 token/base 规则。
 - Biome 以单引号、space、2 spaces 检查全部目标代码。
 - 核心流程覆盖 0、1、多个 Release 及所有规定错误状态。
+- 匿名查询仍是默认路径；Token 只能临时传递，认证失败可恢复且不会进入持久化或
+  共享缓存。
+- 首页示例为 `noctisynth/semifold`，导航显示 `API Docs`，浏览器标题为
+  `GitHub Proxy Plus`。
+- 320px 以上视口在 Token 收起和展开状态均无水平溢出。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
 - README、`DESIGN.md`、`TODO.md` 与实际实现一致。
 
