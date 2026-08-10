@@ -49,6 +49,8 @@
   models, stores, actions, selectors, schemas, and associated types under
   `src/models/`.
 - Do not keep duplicated state that can be derived by selectors.
+- Keep pages in a first-screen design: keep content height as small as possible
+  and avoid requiring users to scroll vertically.
 
 ## Formatting and review
 

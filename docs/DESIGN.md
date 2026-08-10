@@ -124,6 +124,7 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 - 保留 `src/globals.css` 当前 light/dark 语义色 token 的 OKLCH 色值。
 - 主色继续使用当前青绿色，不引入新的品牌主色或渐变色系。
 - Luma 负责组件形态、密度、边框、排版和层级，不覆盖现有品牌色 token。
+- 页面保持首屏设计风格；内容高度尽可能小，尽量不让用户上下滚动。
 - 减少与任务无关的发光球、持续脉冲和大面积装饰；动效只表达状态变化。
 - 所有非必要动效必须遵守 `prefers-reduced-motion`。
 - 正文与控件对比度至少满足 WCAG 2.2 AA。
@@ -609,6 +610,8 @@ pnpm build
   可恢复且不会进入 Worker、Zustand 或持久化存储。
 - 首页示例为 `noctisynth/semifold`，导航显示 `API Docs`，浏览器标题为
   `GitHub Proxy Plus`。
+- 页面保持首屏设计风格，内容高度尽可能小；除必要的长列表或高级选择外，尽量不让
+  用户上下滚动。
 - 320px 以上视口在 Token 收起和展开状态均无水平溢出。
 - 搜索表单使用 shadcn/ui 官方 `Field`、`InputGroup`、`Collapsible`、`Button` 和
   `Badge` 组合；Token 区域视觉上从属于仓库主输入，不形成 Card 套 Card。

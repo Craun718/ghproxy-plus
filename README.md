@@ -4,6 +4,10 @@ ghproxy-plus finds a suitable GitHub Release asset for the current device and
 downloads it through a self-hosted GitHub proxy. It also keeps the low-level
 proxy API available for direct use.
 
+Pages keep a first-screen design: content height should be as small as possible
+and users should rarely need to scroll vertically. (页面保持首屏设计风格，页面内容
+高度尽可能要小，尽量不要让用户上下滚动。)
+
 Canonical repository: [Craun718/ghproxy-plus](https://github.com/Craun718/ghproxy-plus)
 
 The frontend is a React 19 + Farm SPA. Its component layer uses shadcn/ui Luma
