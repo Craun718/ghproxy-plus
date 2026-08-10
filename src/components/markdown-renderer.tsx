@@ -37,7 +37,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           <h2
             className={cn(
               headingLinkClass,
-              'mb-3 mt-10 text-2xl first:mt-0',
+              'mb-3 mt-6 text-2xl first:mt-0',
               className
             )}
             {...props}
@@ -69,7 +69,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         ),
         a: MarkdownLink,
         hr: ({ className, ...props }) => (
-          <hr className={cn('my-8 border-border', className)} {...props} />
+          <hr className={cn('my-4 border-border', className)} {...props} />
         ),
         blockquote: ({ className, ...props }) => (
           <blockquote
