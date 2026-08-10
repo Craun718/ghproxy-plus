@@ -1,4 +1,4 @@
-import { Download, FileArchive, ShieldCheck } from 'lucide-react';
+import { Download, FileArchive, FileText, ShieldCheck } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -52,6 +52,12 @@ const groupDefinitions: AssetGroupDefinition[] = [
     kinds: ['checksum', 'signature'],
     title: 'Checksums and signatures',
     description: 'Verification files are never selected automatically.'
+  },
+  {
+    kinds: ['config'],
+    title: 'Config and metadata',
+    description:
+      'Configuration and update metadata are never selected automatically.'
   }
 ];
 
@@ -61,6 +67,9 @@ function AssetIcon({ kind }: { kind: AssetKind }) {
   }
   if (kind === 'source') {
     return <FileArchive className="size-4" aria-hidden="true" />;
+  }
+  if (kind === 'config') {
+    return <FileText className="size-4" aria-hidden="true" />;
   }
   return <Download className="size-4" aria-hidden="true" />;
 }

@@ -3,6 +3,7 @@ import type { RepositoryAsset } from '@/models/repository-download-types';
 import {
   classifyAsset,
   inferAssetArchitecture,
+  inferAssetFormat,
   inferAssetPlatform,
   recommendAsset
 } from './asset-matcher';
@@ -16,18 +17,22 @@ function createAsset(name: string): RepositoryAsset {
     downloadCount: 1,
     contentType: 'application/octet-stream',
     kind: classifyAsset(name),
-    format: null,
+    format: inferAssetFormat(name),
     platform: inferAssetPlatform(name),
     architecture: inferAssetArchitecture(name)
   };
 }
 
 describe('asset metadata', () => {
-  it('separates source, checksum and signature assets', () => {
+  it('separates source, checksum, signature and config assets', () => {
     expect(classifyAsset('SourceCode-v1.0.0.zip')).toBe('source');
     expect(classifyAsset('tool.sha256')).toBe('checksum');
     expect(classifyAsset('SHA256SUMS')).toBe('checksum');
     expect(classifyAsset('tool.tar.gz.asc')).toBe('signature');
+    expect(classifyAsset('latest-mac.yml')).toBe('config');
+    expect(classifyAsset('latest-linux.yaml')).toBe('config');
+    expect(classifyAsset('update.json')).toBe('config');
+    expect(classifyAsset('metadata.xml')).toBe('config');
   });
 
   it('detects common platforms and architectures', () => {
@@ -35,6 +40,12 @@ describe('asset metadata', () => {
     expect(inferAssetArchitecture('tool-windows-x86_64.zip')).toBe('x64');
     expect(inferAssetPlatform('tool-darwin-arm64.tar.gz')).toBe('macos');
     expect(inferAssetArchitecture('tool-darwin-arm64.tar.gz')).toBe('arm64');
+  });
+
+  it('prefers suffix-derived platform over platform words in filenames', () => {
+    expect(inferAssetFormat('draw.io-arm64-31.1.8.dmg')).toBe('dmg');
+    expect(inferAssetPlatform('draw.io-arm64-31.1.8.dmg')).toBe('macos');
+    expect(inferAssetPlatform('tool-windows-x64.dmg')).toBe('macos');
   });
 });
 
@@ -67,5 +78,29 @@ describe('recommendAsset', () => {
 
     expect(result.confidence).toBe('none');
     expect(result.assetId).toBeNull();
+  });
+
+  it('does not recommend config or update metadata automatically', () => {
+    const result = recommendAsset(
+      [createAsset('latest-mac.yml')],
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    );
+
+    expect(result.confidence).toBe('none');
+    expect(result.assetId).toBeNull();
+  });
+
+  it('prefers the dmg installer over update metadata on macOS', () => {
+    const assets = [
+      createAsset('latest-mac.yml'),
+      createAsset('draw.io-arm64-31.1.8.dmg')
+    ];
+    const result = recommendAsset(
+      assets,
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    );
+
+    expect(result.assetId).toBe('draw.io-arm64-31.1.8.dmg');
+    expect(result.reasons).toContain('Prefers dmg format');
   });
 });

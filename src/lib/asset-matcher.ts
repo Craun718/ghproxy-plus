@@ -24,10 +24,25 @@ const checksumSuffixes = [
 
 const signatureSuffixes = ['.asc', '.sig', '.minisig'];
 
+const configSuffixes = [
+  '.yml',
+  '.yaml',
+  '.json',
+  '.xml',
+  '.toml',
+  '.ini',
+  '.cfg',
+  '.conf',
+  '.properties',
+  '.plist',
+  '.blockmap'
+];
+
 const formatSuffixes = [
   'tar.gz',
   'tar.zst',
   'tar.xz',
+  '7z',
   'appimage',
   'msi',
   'dmg',
@@ -35,11 +50,48 @@ const formatSuffixes = [
   'deb',
   'rpm',
   'apk',
+  'ipa',
   'exe',
   'zip',
   'tgz',
   'gz'
 ];
+
+const formatPriority: Record<string, number> = {
+  exe: 12,
+  msi: 12,
+  dmg: 12,
+  pkg: 12,
+  appimage: 12,
+  deb: 12,
+  rpm: 12,
+  apk: 12,
+  ipa: 12,
+  '7z': 6,
+  'tar.gz': 6,
+  'tar.xz': 6,
+  'tar.zst': 6,
+  tgz: 6,
+  zip: 6,
+  gz: 2
+};
+
+const platformByFormat: Record<string, string> = {
+  exe: 'windows',
+  msi: 'windows',
+  dmg: 'macos',
+  pkg: 'macos',
+  appimage: 'linux',
+  deb: 'linux',
+  rpm: 'linux',
+  apk: 'android',
+  ipa: 'ios'
+};
+
+const platformMatchScore = 8;
+const architectureMatchScore = 4;
+const platformMismatchPenalty = 20;
+const architectureMismatchPenalty = 8;
 
 const platformPatterns: Record<string, RegExp> = {
   windows: /(?:^|[_.-])(windows|win32|win64|win)(?:[_.-]|$)/i,
@@ -68,6 +120,10 @@ export function classifyAsset(name: string): AssetKind {
 
   if (signatureSuffixes.some((suffix) => lowerName.endsWith(suffix))) {
     return 'signature';
+  }
+
+  if (configSuffixes.some((suffix) => lowerName.endsWith(suffix))) {
+    return 'config';
   }
 
   if (
@@ -99,7 +155,10 @@ function findPatternMatch(
 }
 
 export function inferAssetPlatform(name: string): string | null {
-  return findPatternMatch(name, platformPatterns);
+  const format = inferAssetFormat(name);
+  const formatPlatform = format ? platformByFormat[format] : null;
+
+  return formatPlatform ?? findPatternMatch(name, platformPatterns);
 }
 
 export function inferAssetArchitecture(name: string): string | null {
@@ -144,7 +203,10 @@ export function recommendAsset(
   keyword?: string
 ): AssetRecommendation {
   const downloadableAssets = assets.filter(
-    (asset) => asset.kind !== 'checksum' && asset.kind !== 'signature'
+    (asset) =>
+      asset.kind !== 'checksum' &&
+      asset.kind !== 'signature' &&
+      asset.kind !== 'config'
   );
   const profile = getDeviceProfile(userAgent);
 
@@ -198,11 +260,18 @@ export function recommendAsset(
         Boolean(profile.architecture) &&
         Boolean(asset.architecture) &&
         asset.architecture !== profile.architecture;
+      const formatScore =
+        platformMatch || architectureMatch
+          ? asset.format
+            ? (formatPriority[asset.format] ?? 0)
+            : 0
+          : 0;
       const score =
-        (platformMatch ? 4 : 0) +
-        (architectureMatch ? 3 : 0) -
-        (platformMismatch ? 5 : 0) -
-        (architectureMismatch ? 4 : 0);
+        formatScore +
+        (platformMatch ? platformMatchScore : 0) +
+        (architectureMatch ? architectureMatchScore : 0) -
+        (platformMismatch ? platformMismatchPenalty : 0) -
+        (architectureMismatch ? architectureMismatchPenalty : 0);
 
       return {
         asset,
@@ -228,6 +297,7 @@ export function recommendAsset(
   }
 
   const reasons = [
+    best.asset.format ? `Prefers ${best.asset.format} format` : null,
     best.platformMatch && profile.platform
       ? `Matches ${profile.platform}`
       : null,

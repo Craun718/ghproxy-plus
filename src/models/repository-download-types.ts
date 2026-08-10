@@ -1,4 +1,9 @@
-export type AssetKind = 'binary' | 'source' | 'checksum' | 'signature';
+export type AssetKind =
+  | 'binary'
+  | 'source'
+  | 'checksum'
+  | 'signature'
+  | 'config';
 
 export type RecommendationConfidence = 'exact' | 'likely' | 'none';
 

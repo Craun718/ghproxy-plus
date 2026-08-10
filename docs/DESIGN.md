@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；P12 下载结果页核心前置与垂直紧凑化已完成
+- 状态：当前工作区权威方案（Source of Truth）；P13 资产推荐后缀与配置文件优先级已完成
 - 最近更新：2026-08-10
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -230,7 +230,7 @@ Drawer 承载桌面端长文档。
   平台、架构、格式、大小、Release 与发布时间（属性）；小屏幕回退为上下布局。
 
 `none` 表示没有可靠匹配，此时不预选下载项，用户必须手动确认。Source Code 与
-可执行资产分组展示，校验和及签名文件不参与默认推荐。
+可执行资产分组展示，校验和、签名及 `yml/yaml/json/xml` 等配置文件不参与默认推荐。
 
 ### 4.4 高级选择
 
@@ -243,7 +243,7 @@ Drawer 承载桌面端长文档。
   `src/components/ui/combobox.tsx`。不得移植上游 Radix `Command + Popover` 组合。
 - Release Combobox 对名称和 tag 检索，选择值继续使用稳定 Release ID；Asset
   Combobox 使用官方 groups、collection 与 custom item 组合，保留 binary、source、
-  checksum/signature 分组以及平台、架构、格式、大小和下载量。
+  checksum/signature、config 分组以及平台、架构、格式、大小和下载量。
 - 搜索关键字、弹层开关和高亮项属于组件局部 UI 状态，不进入 Zustand、URL 或
   持久化存储；过滤结果必须由当前 releases/assets 派生，不新增重复列表状态。
 - 空搜索结果只显示明确的 empty message，不得改变现有 Release、Asset 或推荐结果。
@@ -583,6 +583,17 @@ pnpm build
   桌面端 Release/Asset 并排，移动端继续上下排列。
 - P2：补充组件、路由和 E2E 布局回归，运行全部质量门禁并同步本文档与 `TODO.md`。
 
+### P13：资产推荐后缀与配置文件优先级（已完成）
+
+- P0：资产平台推断优先使用已知安装包后缀，再回退到文件名中的 OS 词；`dmg/pkg`
+  推导为 macOS，`exe/msi` 推导为 Windows，`appimage/deb/rpm` 推导为 Linux，
+  `apk` 推导为 Android，`ipa` 推导为 iOS。
+- P1：新增 `config` 资产类型，`yml/yaml/json/xml` 及同类配置/更新元数据不参与默认
+  推荐；推荐评分加入格式优先级：`.exe/.msi/.dmg/.pkg/.appimage/.deb/.rpm/.apk/.ipa`
+  最高，`.7z/.tar.gz/.tar.xz/.tar.zst/.tgz/.zip` 次之，`.gz` 最低。
+- P2：增加 draw.io `draw.io-arm64-31.1.8.dmg` 优先于 `latest-mac.yml` 的回归测试，
+  并同步本文档与 `TODO.md`。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -613,6 +624,9 @@ pnpm build
 - Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL
   恢复和 Zustand 单向状态流；设备匹配不隐藏其他资产，单 Release 仍可下载，空搜索
   不会改变选择。
+- 资产推荐按已知文件后缀优先：真实安装包/归档包优先于 `yml/yaml/json/xml` 等
+  配置/更新元数据；后缀可推导平台时优先于文件名中的 OS 词，平台或架构冲突仍不得
+  压过匹配项。
 - RecommendedAsset 在桌面断点将包概览与属性左右分栏，320px 回退为上下布局；
   `/download` 垂直节奏已收紧，主操作触屏高度继续不低于 44px。
 - `/download` 在 `ready` 状态将仓库上下文、推荐资产和仅源码提示合并到结果卡；
@@ -662,6 +676,10 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
   推荐资产、仅源码提示和下载/复制操作，`empty-release` 等非 `ready` 回退状态仍使用
   仓库摘要卡。RecommendedAsset 在桌面将包概览与属性左右分栏，高级选择桌面并排，
   下载/复制操作保持底部布局和 44px 触屏目标。
+- 资产推荐为纯函数；平台推断先看 `.exe/.dmg/.pkg/.appimage/.deb/.rpm/.apk/.ipa`
+  等已知后缀，再看文件名平台词。评分区分格式优先级、平台匹配/冲突和架构匹配/冲突，
+  `yml/yaml/json/xml` 等配置文件作为独立类型展示，不会参与默认推荐或压过真实
+  安装包。
 - Release 与 Asset 高级选择使用正式 shadcn/ui CLI 生成并经精简审查的 Base UI
   Combobox。Release 按名称与 tag 搜索，Asset 按名称、类型、平台、架构和格式搜索并
   保留分组、元数据及推荐标记；稳定 ID 仍是 Zustand 与 URL 的唯一选择标识。搜索词
