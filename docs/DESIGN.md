@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；PR #2 review 修订已完成
+- 状态：当前工作区权威方案（Source of Truth）；P12 下载结果页核心前置与垂直紧凑化已完成
 - 最近更新：2026-08-10
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -71,10 +71,10 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 ```text
 输入仓库地址
   -> 校验并解析仓库
-  -> 加载仓库与 Release
+  -> 进入下载结果页并加载仓库与 Release
   -> 展示推荐资产及推荐依据
   -> 下载或复制代理链接
-  -> 按需展开版本和资产选择
+  -> 在结果页选择其他版本或文件
 ```
 
 ### 2.2 成功标准
@@ -155,16 +155,34 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 
 ### 4.1 页面结构
 
-主页按以下顺序组织：
+主页（`/`）按以下顺序组织：
 
 1. 精简 Header：品牌、`API Docs`、指向 `Craun718/ghproxy-plus` 的 GitHub 链接和
    可选服务状态。
 2. 任务标题：说明“粘贴仓库地址，获取适合当前设备的 Release 资产”。
 3. 仓库搜索表单：支持仓库 URL、`owner/repo` 和 Release URL。
-4. 仓库摘要：名称、描述、当前版本、发布日期和仓库链接。
-5. 推荐资产：核心结果与首要操作。
-6. 高级选择：按需展开 Release 和资产列表。
-7. 精简 Footer：项目与必要法律信息，不展示技术栈广告。
+4. 空状态、本地校验和可恢复的查询错误；匿名限流时仍在此页自动展开临时 Token 区域。
+5. 精简 Footer：项目与必要法律信息，不展示技术栈广告。
+
+下载结果页（`/download`）承载一次成功查询的所有结果与选择操作：
+
+1. 紧凑顶部栏：返回主页入口、页面标题和简短说明；返回按钮与 API 文档页一致，
+   位于标题之前，使用 `ghost`/`sm` 样式。
+2. 结果卡：仓库上下文（名称、描述、当前版本、发布日期和仓库链接）、推荐资产或
+   无自动匹配提示，以及下载、复制代理链接操作；仅源码提示并入无自动匹配结果卡。
+3. 版本与文件选择：在此页按需展开 Release 和资产列表；无自动匹配时自动展开，
+   桌面端 Release/Asset 并排，移动端保持上下排列。
+4. 返回主页以查询其他仓库的入口。
+
+`/download` 本身按路由懒加载，因此 Release/Asset 选择器可以作为结果页的静态组成
+部分加载；不得再为同一段交互叠加嵌套的动态 import，避免结果页展开时产生额外的
+代码分块加载边界。
+
+主页在仓库查询得到可展示的仓库结果（`ready` 或 `empty`）后跳转到结果页；这使
+临时 GitHub Token 始终只停留在首页组件内存中，不进入 URL、路由 state 或 Zustand。
+直接访问带有效查询参数的结果页时，结果页自行进行匿名查询；没有 `repo` 参数时返回
+主页。结果页的可恢复错误应提供返回预填仓库地址的主页入口，以便用户使用临时 Token
+重试。
 
 API 文档迁移为独立 `/docs` 页面，不再在主页初始化时下载 Markdown，也不使用底部
 Drawer 承载桌面端长文档。
@@ -207,6 +225,9 @@ Drawer 承载桌面端长文档。
 - 主操作“下载”。
 - 次操作“复制代理链接”。
 - “选择其他版本或文件”入口。
+- `ready` 状态将仓库上下文与推荐资产合并到同一结果卡，不再单独渲染仓库摘要卡。
+- 桌面断点使用左右布局：左侧展示匹配标识、文件名和推荐理由（包概览），右侧展示
+  平台、架构、格式、大小、Release 与发布时间（属性）；小屏幕回退为上下布局。
 
 `none` 表示没有可靠匹配，此时不预选下载项，用户必须手动确认。Source Code 与
 可执行资产分组展示，校验和及签名文件不参与默认推荐。
@@ -227,6 +248,8 @@ Drawer 承载桌面端长文档。
   持久化存储；过滤结果必须由当前 releases/assets 派生，不新增重复列表状态。
 - 空搜索结果只显示明确的 empty message，不得改变现有 Release、Asset 或推荐结果。
 - 触屏目标至少 44 x 44 CSS pixels。
+- 桌面端 Release/Asset 选择器并排展示，移动端纵向排列；无自动匹配时高级选择保持
+  自动展开，不要求用户先点击折叠入口。
 - 小屏幕上的主次操作纵向排列，不能依赖横向挤压。
 
 ### 4.5 状态和错误反馈
@@ -286,6 +309,7 @@ src/
     repository-download-schema.ts
   pages/
     home-page.tsx
+    download-page.tsx
     docs-page.tsx
   globals.css
   index.tsx
@@ -328,13 +352,15 @@ GitHub Token 是敏感的临时表单值，不属于共享领域状态。模型 
 
 ### 5.3 URL 状态
 
-目标 URL：
+目标结果 URL：
 
 ```text
-/?repo=owner/repo&release=v1.2.0&asset=asset-id
+/download?repo=owner/repo&release=v1.2.0&asset=asset-id
 ```
 
-- 首次加载时自动解析并查询 `repo`。
+- 首页成功查询后使用上述 URL 进入下载结果页；旧的 `/?repo=…` 分享链接仍应在查询
+  成功后迁移至该 URL。
+- 首次加载下载结果页时自动解析并查询 `repo`。
 - 数据加载后恢复 `release` 与 `asset`；无效值回退到可解释状态。
 - 用户切换 Release 或资产时使用 replace 更新 URL，避免污染历史记录。
 - URL 中使用稳定标识，不依赖完整 GitHub 下载 URL。
@@ -415,7 +441,11 @@ GET https://api.github.com/repos/:owner/:repo/releases?per_page=100
 - 组件测试：0、1、多个 Release，空资产，Clipboard 拒绝，Token 折叠与限流展开。
 - 组件测试：Release/Asset Combobox 搜索、空结果、分组、自定义元数据、选择后 URL
   同步，以及搜索状态不进入 Zustand。
+- 路由组件测试：主页成功查询后进入 `/download`，结果页直接加载、缺少 `repo` 的
+  回退、错误时返回预填首页，以及 Token 不进入结果页、URL 或 Zustand。
 - E2E：桌面和移动端查询、推荐、手动切换、下载、复制和刷新恢复。
+- E2E：从首页查询后进入下载结果页，结果 URL 分享与刷新恢复，以及结果页返回主页后
+  的 Token 重试路径。
 - E2E：浏览器 GitHub 查询与 Token `Authorization` header、`noctisynth/semifold`
   示例、320px Token 展开态无溢出，并确认 Token 不发送给 Worker。
 - E2E：大量 Release/Asset 下的筛选、键盘选择、清空/无结果、下载文件名，以及
@@ -522,6 +552,37 @@ pnpm build
   查询、Token、错误映射、全部资产可见性和 E2E 回归。
 - P3：同步 README、API Docs、本文档和 `TODO.md`，通过全部质量门禁后推送 PR #2。
 
+### P9：下载结果子页面（已完成）
+
+- P0：将仓库摘要、仅源码提示、推荐资产和版本/文件选择从首页迁移到 `/download`
+  结果页；首页只保留查询入口与可恢复的查询反馈。
+- P1：保持 URL 恢复、推荐、手动选择、下载、复制与高级选择语义，并为直接结果页
+  访问和缺失参数提供可解释的回退。
+- P2：确保临时 Token 不跨路由传递；限流和其他可恢复查询错误仍能返回预填的首页重试。
+- P3：补齐路由组件与 E2E 回归，运行全部质量门禁并同步本文档与 `TODO.md`。
+
+### P10：RecommendedAsset 左右布局（已完成）
+
+- P0：将推荐资产卡片由上下三段式改为桌面左右两栏；左栏保留匹配标识、文件名和
+  推荐理由（概览），右栏展示平台、架构、格式、大小、Release 与发布时间（属性），
+  下载与复制操作仍位于卡片底部。
+- P1：保持无自动匹配状态与 320px 上下布局，补充桌面/移动位置回归并同步本文档
+  与 `TODO.md`。
+
+### P11：下载结果页垂直紧凑化（已完成）
+
+- P0：收紧 `/download` 的页面 section 间距、标题区、推荐卡内边距和元数据行距；
+  下载/复制按钮与高级选择入口继续保留 44px 以上触屏高度。
+- P1：复核 320px 无水平溢出与 axe，运行全部质量门禁并同步本文档与 `TODO.md`。
+
+### P12：下载结果页核心前置与垂直紧凑化（已完成）
+
+- P0：`ready` 状态将仓库上下文并入结果卡顶部，移除独立仓库摘要卡；仅源码提示并入
+  无自动匹配结果卡，非 `ready` 状态仍保留仓库摘要用于空 Release 等回退场景。
+- P1：将返回入口与页面标题合并为紧凑顶部栏；无自动匹配时高级选择保持自动展开，
+  桌面端 Release/Asset 并排，移动端继续上下排列。
+- P2：补充组件、路由和 E2E 布局回归，运行全部质量门禁并同步本文档与 `TODO.md`。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -552,6 +613,10 @@ pnpm build
 - Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL
   恢复和 Zustand 单向状态流；设备匹配不隐藏其他资产，单 Release 仍可下载，空搜索
   不会改变选择。
+- RecommendedAsset 在桌面断点将包概览与属性左右分栏，320px 回退为上下布局；
+  `/download` 垂直节奏已收紧，主操作触屏高度继续不低于 44px。
+- `/download` 在 `ready` 状态将仓库上下文、推荐资产和仅源码提示合并到结果卡；
+  无自动匹配时高级选择自动展开，桌面端 Release/Asset 并排，移动端上下排列。
 - 浏览器直接请求 GitHub Repository/Releases API，Worker 不再暴露 `/api/repos` 或
   `/api/download`；组件与 Zustand 仍只接收归一化的项目响应模型。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
@@ -560,7 +625,7 @@ pnpm build
 ## 11. 当前实施基线
 
 Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review 和预览环境
-429 证据批准并完成 P8 数据边界修订。
+429 证据批准并完成 P8 数据边界修订；P9 已将下载结果迁移至独立子页面。
 
 当前基线：
 
@@ -585,13 +650,23 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
   浏览器直接发送给 GitHub API，不经过当前 Worker。无效 Token 映射为
   `invalid-token`，限流时自动展开认证区域。Token disclosure 为
   轻量辅助操作，展开后使用单层 muted surface 和带显示/隐藏操作的密码 Input Group。
+- 首页只承载仓库查询、输入校验与可恢复查询错误；成功的查询在同一页完成后进入
+  路由懒加载的 `/download` 结果页，因此临时 Token 不会穿过路由、URL 或 Zustand。
+  `/download` 直接访问时匿名恢复查询，缺少 `repo` 时返回首页，错误时提供预填
+  首页的 Token 重试入口。仓库摘要、仅源码提示、推荐资产、下载/复制操作与高级
+  Release/Asset 选择全部位于该结果页；高级选择器随结果页静态加载，不进入首页
+  初始 JavaScript。
 - `/docs` 使用路由懒加载，Worker 静态资源启用 SPA fallback，主页不加载 API
   Markdown。
+- `/download` 结果页使用紧凑垂直节奏；`ready` 状态由单一结果卡承载仓库上下文、
+  推荐资产、仅源码提示和下载/复制操作，`empty-release` 等非 `ready` 回退状态仍使用
+  仓库摘要卡。RecommendedAsset 在桌面将包概览与属性左右分栏，高级选择桌面并排，
+  下载/复制操作保持底部布局和 44px 触屏目标。
 - Release 与 Asset 高级选择使用正式 shadcn/ui CLI 生成并经精简审查的 Base UI
   Combobox。Release 按名称与 tag 搜索，Asset 按名称、类型、平台、架构和格式搜索并
   保留分组、元数据及推荐标记；稳定 ID 仍是 Zustand 与 URL 的唯一选择标识。搜索词
-  和弹层状态只存在于组件本地，空结果不改变当前选择。高级选择器在仓库结果到达后
-  预取并在展开时按需加载。
+  和弹层状态只存在于组件本地，空结果不改变当前选择。高级选择器随路由懒加载的
+  下载结果页一起加载，不进入首页初始 JavaScript。
 - `/api/ghproxy/` 支持成功 GET/HEAD 文件响应的强制附件下载，在多级 CDN 重定向后
   保留初始 GitHub URL 文件名，并输出安全 ASCII `filename` 与 RFC 5987 `filename*`；
   Unicode、非法百分号、路径分隔符、控制字符和 header 注入均有自动化回归覆盖。
@@ -602,8 +677,8 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
   typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
 - 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 110,000 bytes。当前构建分别约为 750.2 KiB、225.5 KiB
-  和 99.3 KiB；高级选择器不进入初始主页 JavaScript。
+  260,000 bytes、应用 CSS 110,000 bytes。当前构建分别约为 740.4 KiB、225.5 KiB
+  和 98.7 KiB；下载结果页与其高级选择器不进入初始主页 JavaScript。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。当前 Vitest 61/61、Playwright 20/20 通过。
+  本地浏览器冒烟预算。当前 Vitest 66/66、Playwright 24/24 通过。

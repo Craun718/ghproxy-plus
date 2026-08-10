@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRepositoryDownloadModel } from '@/models/repository-download-model';
 import type {
@@ -9,6 +9,7 @@ import type {
   RepositoryRelease,
   RepositoryResponse
 } from '@/models/repository-download-types';
+import DownloadPage from './download-page';
 import HomePage from './home-page';
 
 function createAsset(
@@ -116,6 +117,29 @@ async function submitRepository() {
   return user;
 }
 
+function CurrentLocation() {
+  const location = useLocation();
+
+  return (
+    <output data-testid="location">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+}
+
+function renderApp(initialEntry = '/') {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/download" element={<DownloadPage />} />
+      </Routes>
+      <CurrentLocation />
+    </MemoryRouter>
+  );
+}
+
 beforeEach(() => {
   useRepositoryDownloadModel.getState().reset();
   Object.defineProperty(navigator, 'userAgent', {
@@ -131,11 +155,7 @@ afterEach(() => {
 
 describe('HomePage release states', () => {
   it('fills the Semifold repository from the idle example', async () => {
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
     const user = userEvent.setup();
 
     await user.click(
@@ -148,11 +168,7 @@ describe('HomePage release states', () => {
   });
 
   it('reveals and masks the optional GitHub token on demand', async () => {
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
     const user = userEvent.setup();
 
     await user.click(
@@ -177,16 +193,15 @@ describe('HomePage release states', () => {
         ])
       ])
     );
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
 
     await submitRepository();
 
     expect(await screen.findByText('tool-windows-x64.zip')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/download?repo=owner%2Frepo&release=v1.0.0&asset=release-1%3Aasset-1%3Atool-windows-x64.zip'
+    );
   });
 
   it('shows a dedicated state when no releases exist', async () => {
@@ -197,11 +212,7 @@ describe('HomePage release states', () => {
         message: 'This repository has no releases or downloadable branch.'
       }
     });
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
 
     expect(screen.getByRole('alert')).toHaveTextContent('No releases found');
   });
@@ -217,11 +228,7 @@ describe('HomePage release states', () => {
         ])
       ])
     );
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
 
     const user = await submitRepository();
     await screen.findByRole('button', { name: 'Download' });
@@ -242,11 +249,7 @@ describe('HomePage release states', () => {
         ])
       ])
     );
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
 
     await submitRepository();
 
@@ -267,11 +270,7 @@ describe('HomePage release states', () => {
         message: 'The selected release has no downloadable assets.'
       }
     });
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'No assets in this release'
@@ -280,11 +279,7 @@ describe('HomePage release states', () => {
 
   it('keeps authentication optional until GitHub rate limits a query', async () => {
     mockGitHubError(429, 'GitHub rate limit reached. Add a token and retry.');
-    render(
-      <MemoryRouter>
-        <HomePage />
-      </MemoryRouter>
-    );
+    renderApp();
 
     expect(screen.queryByLabelText('GitHub token')).not.toBeInTheDocument();
     await submitRepository();

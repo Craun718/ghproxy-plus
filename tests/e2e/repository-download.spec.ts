@@ -319,10 +319,48 @@ test('keeps GitHub authentication optional and sends it only to GitHub', async (
   }
   expect(workerRepositoryRequests).toEqual([]);
   await expect(page).not.toHaveURL(/github_pat_e2e-token/);
+  await expect(page).toHaveURL(/\/download\?repo=owner%2Frepo/);
   await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
 
   const accessibilityResults = await new AxeBuilder({ page }).analyze();
   expect(accessibilityResults.violations).toEqual([]);
+});
+
+test('returns a direct result error to a prefilled token retry form', async ({
+  page
+}) => {
+  await page.unroute('https://api.github.com/repos/**');
+  await page.route('https://api.github.com/repos/**', (route) => {
+    const corsHeaders = {
+      'access-control-allow-headers':
+        'Accept, Authorization, X-GitHub-Api-Version',
+      'access-control-allow-methods': 'GET',
+      'access-control-allow-origin': '*'
+    };
+
+    if (route.request().method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: corsHeaders });
+    }
+
+    return route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      headers: corsHeaders,
+      body: JSON.stringify({ message: 'GitHub rate limit reached.' })
+    });
+  });
+
+  await page.goto('/download?repo=owner%2Frepo');
+  await expect(page.getByRole('alert')).toContainText(
+    'GitHub rate limit reached'
+  );
+  await page
+    .getByRole('link', { name: 'Try again from the search page' })
+    .click();
+
+  await expect(page).toHaveURL(/\/?repo=owner%2Frepo/);
+  await expect(page.getByLabel('GitHub repository')).toHaveValue('owner/repo');
+  await expect(page.getByLabel('GitHub token')).toBeVisible();
 });
 
 test('queries, switches assets, copies and restores URL state', async ({
@@ -334,6 +372,7 @@ test('queries, switches assets, copies and restores URL state', async ({
   await page.getByLabel('GitHub repository').fill('owner/repo');
   await page.getByRole('button', { name: 'Find assets' }).click();
 
+  await expect(page).toHaveURL(/\/download\?repo=owner%2Frepo/);
   await expect(page.getByRole('link', { name: 'owner/repo' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
   await expect(page).toHaveURL(/repo=owner%2Frepo/);
@@ -393,6 +432,7 @@ test('starts the selected proxy download', async ({ page }) => {
     })
   );
   await page.goto('/?repo=owner%2Frepo');
+  await expect(page).toHaveURL(/\/download\?repo=owner%2Frepo/);
   await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
@@ -407,7 +447,7 @@ test('filters large release and asset collections without leaking search state',
 }) => {
   await page.unroute('https://api.github.com/repos/**');
   await mockGitHubApi(page, createLargeRepositoryResponse());
-  await page.goto('/?repo=owner%2Frepo');
+  await page.goto('/download?repo=owner%2Frepo');
   await ensureAdvancedSelectionOpen(page);
 
   const releaseInput = page.getByRole('combobox', {
@@ -447,7 +487,7 @@ test('keeps both combobox popups within a 320px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 });
   await page.unroute('https://api.github.com/repos/**');
   await mockGitHubApi(page, createLargeRepositoryResponse());
-  await page.goto('/?repo=owner%2Frepo');
+  await page.goto('/download?repo=owner%2Frepo');
   await ensureAdvancedSelectionOpen(page);
 
   for (const input of [
@@ -483,8 +523,7 @@ test('has no horizontal overflow at target breakpoints', async ({ page }) => {
     { width: 1440, height: 900 }
   ]) {
     await page.setViewportSize(viewport);
-    await page.goto('/?repo=owner%2Frepo');
-    await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+    await page.goto('/');
     await page.getByRole('button', { name: /Use a GitHub token/ }).click();
     await expect(page.getByLabel('GitHub token')).toBeVisible();
 
@@ -493,6 +532,70 @@ test('has no horizontal overflow at target breakpoints', async ({ page }) => {
         () => document.documentElement.scrollWidth <= window.innerWidth
       )
     ).toBe(true);
+
+    await page.goto('/download?repo=owner%2Frepo');
+    await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true);
+
+    const overviewBox = await page
+      .locator('[data-slot="card-title"]')
+      .first()
+      .boundingBox();
+    const attributeBox = await page
+      .getByText('Platform', { exact: true })
+      .boundingBox();
+    if (!overviewBox || !attributeBox) {
+      throw new Error(
+        'Recommended asset overview and attributes must have layout.'
+      );
+    }
+
+    if (viewport.width >= 1024) {
+      expect(attributeBox.x).toBeGreaterThanOrEqual(
+        overviewBox.x + overviewBox.width
+      );
+    } else {
+      expect(attributeBox.x).toBeLessThanOrEqual(overviewBox.x + 1);
+      expect(attributeBox.y).toBeGreaterThan(
+        overviewBox.y + overviewBox.height - 1
+      );
+    }
+  }
+});
+
+test('keeps advanced selectors side by side on desktop and stacked on mobile', async ({
+  page
+}) => {
+  for (const viewport of [
+    { width: 1024, height: 800 },
+    { width: 320, height: 720 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/download?repo=owner%2Frepo');
+    await ensureAdvancedSelectionOpen(page);
+
+    const releaseBox = await page
+      .getByRole('combobox', { name: 'Release', exact: true })
+      .boundingBox();
+    const assetBox = await page
+      .getByRole('combobox', { name: 'Asset', exact: true })
+      .boundingBox();
+
+    if (!releaseBox || !assetBox) {
+      throw new Error('Release and Asset comboboxes must have layout boxes.');
+    }
+
+    if (viewport.width >= 1024) {
+      expect(assetBox.x).toBeGreaterThanOrEqual(
+        releaseBox.x + releaseBox.width - 1
+      );
+    } else {
+      expect(assetBox.y).toBeGreaterThan(releaseBox.y + releaseBox.height - 1);
+    }
   }
 });
 
@@ -524,6 +627,7 @@ test('supports the core keyboard path', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Find assets' })).toBeFocused();
   await page.keyboard.press('Enter');
 
+  await expect(page).toHaveURL(/\/download\?repo=owner%2Frepo/);
   await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
   const advancedTrigger = page.getByRole('button', {
     name: 'Choose another release or file'

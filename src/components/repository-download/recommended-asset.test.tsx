@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   AssetRecommendation,
   RepositoryAsset,
-  RepositoryRelease
+  RepositoryRelease,
+  RepositorySummary
 } from '@/models/repository-download-types';
 import { RecommendedAsset } from './recommended-asset';
 
@@ -30,6 +31,15 @@ const release: RepositoryRelease = {
   publishedAt: '2026-01-01T00:00:00Z',
   prerelease: false,
   assets: [asset]
+};
+
+const repository: RepositorySummary = {
+  owner: 'owner',
+  name: 'repo',
+  fullName: 'owner/repo',
+  description: 'A test repository',
+  url: 'https://github.com/owner/repo',
+  defaultBranch: 'main'
 };
 
 const recommendation: AssetRecommendation = {
@@ -58,12 +68,16 @@ describe('RecommendedAsset', () => {
       <RecommendedAsset
         asset={asset}
         release={release}
+        repository={repository}
         recommendation={recommendation}
         proxyPath={`/api/ghproxy/${asset.downloadUrl}`}
         isManualSelection={false}
       />
     );
 
+    expect(
+      screen.getByRole('link', { name: 'owner/repo' })
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Copy proxy link' }));
 
     expect(writeText).toHaveBeenCalledOnce();
@@ -77,6 +91,7 @@ describe('RecommendedAsset', () => {
       <RecommendedAsset
         asset={null}
         release={release}
+        repository={repository}
         recommendation={{
           assetId: null,
           confidence: 'none',
@@ -93,5 +108,46 @@ describe('RecommendedAsset', () => {
     expect(
       screen.queryByRole('button', { name: 'Download' })
     ).not.toBeInTheDocument();
+  });
+
+  it('explains source-only results inside the no-match card', () => {
+    const sourceAsset: RepositoryAsset = {
+      ...asset,
+      id: 'asset-source',
+      name: 'source.zip',
+      downloadUrl: 'https://github.com/owner/repo/archive/refs/tags/v1.0.0.zip',
+      size: null,
+      downloadCount: null,
+      kind: 'source',
+      platform: null,
+      architecture: null
+    };
+
+    render(
+      <RecommendedAsset
+        asset={null}
+        release={{ ...release, assets: [sourceAsset] }}
+        repository={repository}
+        recommendation={{
+          assetId: null,
+          confidence: 'none',
+          reasons: ['No release asset matches the detected device'],
+          platform: 'linux',
+          architecture: 'x64'
+        }}
+        proxyPath={null}
+        isManualSelection={false}
+      />
+    );
+
+    expect(screen.getByText('No automatic match')).toBeInTheDocument();
+    expect(
+      screen.getByText('Only source code is available')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No installer or binary was published for this release. Select a source archive manually if that is what you need.'
+      )
+    ).toBeInTheDocument();
   });
 });

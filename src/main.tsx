@@ -7,6 +7,7 @@ import HomePage from '@/pages/home-page';
 import './globals.css';
 
 const DocsPage = lazy(() => import('@/pages/docs-page'));
+const DownloadPage = lazy(() => import('@/pages/download-page'));
 
 function RouteFallback() {
   return (
@@ -25,10 +26,11 @@ export function Main() {
     <BrowserRouter>
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <AppHeader />
-        <main className="w-full flex-1 px-4  sm:px-6 sm:py-12">
+        <main className="w-full flex-1 px-4 sm:px-6 sm:py-8">
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/download" element={<DownloadPage />} />
               <Route path="/docs" element={<DocsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

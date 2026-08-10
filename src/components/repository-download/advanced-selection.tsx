@@ -25,7 +25,7 @@ export default function AdvancedSelection({
   onSelectAsset
 }: AdvancedSelectionProps) {
   return (
-    <div className="space-y-6">
+    <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
       <ReleasePicker
         releases={releases}
         selectedReleaseId={selectedReleaseId}
