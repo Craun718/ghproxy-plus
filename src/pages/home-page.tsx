@@ -1,4 +1,4 @@
-import { ChevronDown, CircleAlert, Info, PackageSearch } from 'lucide-react';
+import { ChevronDown, CircleAlert, Info } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { LoadingResult } from '@/components/repository-download/loading-result';
 import { RecommendedAsset } from '@/components/repository-download/recommended-asset';
@@ -115,29 +115,19 @@ export default function HomePage() {
     !currentRelease.assets.some((asset) => asset.kind === 'binary');
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8">
-      <section className="mx-auto max-w-3xl space-y-5 text-center">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/12 text-primary">
-          <PackageSearch className="size-6" aria-hidden="true" />
-        </div>
+    <div className="mx-auto w-full max-w-5xl space-y-5">
+      <section className="mx-auto max-w-3xl space-y-3 text-center">
         <div className="space-y-3">
           <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
             Find the right GitHub Release asset
           </h1>
           <p className="text-pretty text-base text-foreground/80 sm:text-lg">
-            Paste a repository and get a device-aware recommendation, then
-            download it through your proxy.
+            Paste a repo. Get the right build. Download via proxy.
           </p>
         </div>
       </section>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Choose a repository</CardTitle>
-          <CardDescription>
-            Validation happens before your browser contacts GitHub.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <RepositorySearchForm
             value={input}

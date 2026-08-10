@@ -128,7 +128,7 @@ export function RepositorySearchForm({
         >
           <CollapsibleTrigger
             render={<Button type="button" variant="ghost" size="sm" />}
-            className="group -ml-3 w-fit text-muted-foreground"
+            className="group -ml-3 w-fit text-muted-foreground mx-0.5"
           >
             <KeyRound aria-hidden="true" />
             Use a GitHub token
