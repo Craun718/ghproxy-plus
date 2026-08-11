@@ -27,6 +27,9 @@
   planning/instruction documentation are allowed.
 - Existing violations are migration tasks. Do not opportunistically fix them
   while doing documentation or investigation work.
+- Do not create commits before the user explicitly authorizes a commit.
+- Git push is manual-only. LLM agents must not run `git push` or trigger remote
+  push operations.
 
 ## Required frontend conventions
 
