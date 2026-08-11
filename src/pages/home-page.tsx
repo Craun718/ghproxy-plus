@@ -127,7 +127,7 @@ export default function HomePage() {
       </Card>
 
       {status === 'idle' ? (
-        <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-3xl border border-dashed border-border px-5 py-5 text-center text-sm text-muted-foreground">
           Try{' '}
           <button
             type="button"

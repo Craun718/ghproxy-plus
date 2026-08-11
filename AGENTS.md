@@ -1,7 +1,5 @@
 # Repository instructions
 
-@/Users/fu050409/.codex/RTK.md
-
 ## Source of truth
 
 - `docs/DESIGN.md` is the authoritative and complete description of the current
