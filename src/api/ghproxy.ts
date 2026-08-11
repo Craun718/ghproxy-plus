@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import type { Context, HonoRequest } from "hono";
+import type { Context, HonoRequest } from 'hono';
 
 // 前缀，如果自定义路由为example.com/gh/*，将PREFIX改为 '/gh/'，注意，少一个杠都会错！
-const GHPROXY_PATH = "/api/ghproxy/";
+const GHPROXY_PATH = '/api/ghproxy/';
 
 // 分支文件使用jsDelivr镜像的开关，0为关闭，默认关闭
 const Config = {
@@ -35,10 +35,10 @@ const whiteList = [] as string[]; // 白名单，路径里面有包含字符的�
 const PREFLIGHT_INIT = {
   status: 204,
   headers: new Headers({
-    "access-control-allow-origin": "*",
-    "access-control-allow-methods":
-      "GET,POST,PUT,PATCH,TRACE,DELETE,HEAD,OPTIONS",
-    "access-control-max-age": "1728000"
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods':
+      'GET,POST,PUT,PATCH,TRACE,DELETE,HEAD,OPTIONS',
+    'access-control-max-age': '1728000'
   })
 } as ResponseInit;
 
@@ -62,7 +62,7 @@ function checkUrl(url: string): boolean {
 export async function ghproxy(c: Context) {
   const urlStr = c.req.url;
   const urlObj = new URL(urlStr);
-  let path = urlObj.searchParams.get("q");
+  let path = urlObj.searchParams.get('q');
   if (path) {
     return Response.redirect(
       `https://${urlObj.host}${GHPROXY_PATH}${path}`,
@@ -72,7 +72,7 @@ export async function ghproxy(c: Context) {
   // cfworker 会把路径中的 `//` 合并成 `/`
   path = urlObj.href
     .slice(urlObj.origin.length + GHPROXY_PATH.length)
-    .replace(/^https?:\/+/, "https://");
+    .replace(/^https?:\/+/, 'https://');
 
   const combinedExp = new RegExp(
     `^(${exp1.source}|${exp3.source}|${exp5.source}|${exp6.source})`
@@ -83,35 +83,35 @@ export async function ghproxy(c: Context) {
   } else if (exp2.test(path)) {
     if (Config.jsdelivr) {
       const newUrl = path
-        .replace("/blob/", "@")
-        .replace(/^(?:https?:\/\/)?github\.com/, "https://cdn.jsdelivr.net/gh");
+        .replace('/blob/', '@')
+        .replace(/^(?:https?:\/\/)?github\.com/, 'https://cdn.jsdelivr.net/gh');
       return Response.redirect(newUrl, 302);
     } else {
-      path = path.replace("/blob/", "/raw/");
+      path = path.replace('/blob/', '/raw/');
       return httpHandler(c.req, path);
     }
   } else if (exp4.test(path)) {
     if (Config.jsdelivr) {
       const newUrl = path
-        .replace(/(?<=com\/.+?\/.+?)\/(.+?\/)/, "@$1")
+        .replace(/(?<=com\/.+?\/.+?)\/(.+?\/)/, '@$1')
         .replace(
           /^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com/,
-          "https://cdn.jsdelivr.net/gh"
+          'https://cdn.jsdelivr.net/gh'
         );
       return Response.redirect(newUrl, 302);
     } else {
       return httpHandler(c.req, path);
     }
   } else {
-    return c.json({ error: "bad url" }, { status: 400 });
+    return c.json({ error: 'bad url' }, { status: 400 });
   }
 }
 
 function httpHandler(req: HonoRequest, pathname: string) {
   // preflight
   if (
-    req.method === "OPTIONS" &&
-    req.header("access-control-request-method") !== undefined
+    req.method === 'OPTIONS' &&
+    req.header('access-control-request-method') !== undefined
   ) {
     return new Response(null, PREFLIGHT_INIT);
   }
@@ -119,7 +119,7 @@ function httpHandler(req: HonoRequest, pathname: string) {
   if (whiteList.length) {
     const isAllowed = whiteList.some((item) => pathname.includes(item));
     if (!isAllowed) {
-      return new Response("blocked", { status: 403 });
+      return new Response('blocked', { status: 403 });
     }
   }
 
@@ -132,33 +132,90 @@ function httpHandler(req: HonoRequest, pathname: string) {
 
   try {
     const urlObj = new URL(urlStr);
-
-    // Extract original filename from the GitHub URL (before CDN redirect)
-    const originalFilename = urlObj.pathname.split("/").pop();
+    const originalFilename = getOriginalFilename(urlObj);
 
     // 根据Content-Type获取请求体
     let body: Promise<string> | null = null;
-    if (req.header("content-type")) {
+    if (req.header('content-type')) {
       body = req.text();
     }
 
     const reqInit = {
       method: req.method,
       headers: req.header(),
-      redirect: "manual",
+      redirect: 'manual',
       body: body
     } as RequestInit;
 
     return proxy(urlObj, reqInit, originalFilename);
   } catch {
-    return new Response("bad url", { status: 400 });
+    return new Response('bad url', { status: 400 });
   }
+}
+
+function getOriginalFilename(url: URL): string | null {
+  const hostname = url.hostname.toLowerCase();
+  const isGithubFile =
+    hostname === 'github.com' &&
+    /\/(?:releases\/download|archive|blob|raw)\//i.test(url.pathname);
+  const isRawFile = /^(?:raw|gist)\.(?:githubusercontent|github)\.com$/i.test(
+    hostname
+  );
+
+  if (!isGithubFile && !isRawFile) return null;
+
+  const pathSegments = url.pathname.split('/');
+  const encodedFilename = pathSegments[pathSegments.length - 1];
+  if (!encodedFilename) return null;
+
+  try {
+    return decodeURIComponent(encodedFilename);
+  } catch {
+    return 'download';
+  }
+}
+
+function sanitizeFilename(filename: string): string {
+  const sanitized = Array.from(filename.normalize('NFC'))
+    .slice(0, 180)
+    .filter((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint >= 0x20 && codePoint !== 0x7f && character !== '"';
+    })
+    .join('')
+    .replace(/[/\\:]/g, '_')
+    .trim();
+
+  if (!sanitized || sanitized === '.' || sanitized === '..') {
+    return 'download';
+  }
+
+  return sanitized;
+}
+
+function encodeRfc5987Value(filename: string): string {
+  return encodeURIComponent(filename).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+export function createDownloadContentDisposition(filename: string): string {
+  const safeFilename = sanitizeFilename(filename);
+  const asciiFilename = Array.from(safeFilename)
+    .map((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint >= 0x20 && codePoint <= 0x7e ? character : '_';
+    })
+    .join('');
+
+  return `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeRfc5987Value(safeFilename)}`;
 }
 
 async function proxy(
   urlObj: URL,
   reqInit: RequestInit,
-  originalFilename?: string
+  originalFilename: string | null
 ) {
   let res: Response;
   try {
@@ -173,35 +230,39 @@ async function proxy(
 
   const status = res.status;
 
-  if (resHdrNew.has("location")) {
-    const _location = resHdrNew.get("location");
+  if (resHdrNew.has('location')) {
+    const _location = resHdrNew.get('location');
     if (_location) {
       if (checkUrl(_location))
-        resHdrNew.set("location", GHPROXY_PATH + _location);
+        resHdrNew.set('location', GHPROXY_PATH + _location);
       else {
         const u = new URL(_location);
         if (u) {
-          reqInit.redirect = "follow";
+          reqInit.redirect = 'follow';
           return proxy(u, reqInit, originalFilename);
         }
       }
     }
   }
 
-  // Force browser download, using the original GitHub filename (not CDN filename)
-  if (originalFilename) {
+  const isSuccessfulDownload =
+    originalFilename !== null &&
+    (reqInit.method === 'GET' || reqInit.method === 'HEAD') &&
+    status >= 200 &&
+    status < 300;
+  if (isSuccessfulDownload) {
     resHdrNew.set(
-      "content-disposition",
-      `attachment; filename="${originalFilename}"`
+      'content-disposition',
+      createDownloadContentDisposition(originalFilename)
     );
   }
 
-  resHdrNew.set("access-control-expose-headers", "*");
-  resHdrNew.set("access-control-allow-origin", "*");
+  resHdrNew.set('access-control-expose-headers', '*');
+  resHdrNew.set('access-control-allow-origin', '*');
 
-  resHdrNew.delete("content-security-policy");
-  resHdrNew.delete("content-security-policy-report-only");
-  resHdrNew.delete("clear-site-data");
+  resHdrNew.delete('content-security-policy');
+  resHdrNew.delete('content-security-policy-report-only');
+  resHdrNew.delete('clear-site-data');
 
   return new Response(res.body, {
     status,
