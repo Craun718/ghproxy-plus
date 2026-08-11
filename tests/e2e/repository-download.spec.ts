@@ -177,12 +177,23 @@ async function ensureAdvancedSelectionOpen(page: Page) {
   const trigger = page.getByRole('button', {
     name: 'Choose another release or file'
   });
-  if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
+  await expect(trigger).toBeVisible();
+
+  const combobox = page.getByRole('combobox', { name: 'Release', exact: true });
+
+  // The auto-expand effect fires when the repository resolves with no
+  // auto-selected asset (e.g. no platform match on mobile). Wait briefly for
+  // it to settle so we don't read a stale aria-expanded and toggle the
+  // collapsible closed while the effect is concurrently opening it.
+  const autoOpened = await combobox
+    .waitFor({ state: 'visible', timeout: 2_000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!autoOpened) {
     await trigger.click();
   }
-  await expect(
-    page.getByRole('combobox', { name: 'Release', exact: true })
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(combobox).toBeVisible({ timeout: 20_000 });
 }
 
 async function expectInlineAddonPlacement(
