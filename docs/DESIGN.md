@@ -2,8 +2,9 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；P13 资产推荐后缀与配置文件优先级已完成
-- 最近更新：2026-08-10
+- 状态：当前工作区权威方案（Source of Truth）；P14 返回入口浅色常显与深色
+  hover 已完成
+- 最近更新：2026-08-11
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -168,7 +169,9 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 下载结果页（`/download`）承载一次成功查询的所有结果与选择操作：
 
 1. 紧凑顶部栏：返回主页入口、页面标题和简短说明；返回按钮与 API 文档页一致，
-   位于标题之前，使用 `ghost`/`sm` 样式。
+   位于标题之前，使用 `ghost`/`sm` 样式，并默认叠加 `bg-muted`（dark 下
+   `bg-muted/50`）保持浅色可见背景；hover 使用 `bg-foreground/30`（dark 下
+   同理）提供深色反馈。
 2. 结果卡：仓库上下文（名称、描述、当前版本、发布日期和仓库链接）、推荐资产或
    无自动匹配提示，以及下载、复制代理链接操作；仅源码提示并入无自动匹配结果卡。
 3. 版本与文件选择：在此页按需展开 Release 和资产列表；无自动匹配时自动展开，
@@ -595,6 +598,15 @@ pnpm build
 - P2：增加 draw.io `draw.io-arm64-31.1.8.dmg` 优先于 `latest-mac.yml` 的回归测试，
   并同步本文档与 `TODO.md`。
 
+### P14：返回入口浅色常显与深色 hover（已完成）
+
+- P0：将 `/download` 的 `Search another repository` 与 `/docs` 的
+  `Back to downloads` 保留 `ghost`/`sm`，默认叠加 `bg-muted`（dark 下
+  `bg-muted/50`）使浅色背景常显，hover 使用 `bg-foreground/30`（dark 下同理）
+  提供深色反馈；路由和文案不变。
+- P1：通过 Biome、typecheck、单元/组件测试和构建门禁，并同步本文档与
+  `TODO.md`。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -679,6 +691,9 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
   推荐资产、仅源码提示和下载/复制操作，`empty-release` 等非 `ready` 回退状态仍使用
   仓库摘要卡。RecommendedAsset 在桌面将包概览与属性左右分栏，高级选择桌面并排，
   下载/复制操作保持底部布局和 44px 触屏目标。
+- `/download` 的 `Search another repository` 与 `/docs` 的 `Back to downloads`
+  使用 `ghost`/`sm` 按钮样式，并默认叠加 `bg-muted`（dark 下 `bg-muted/50`），
+  浅色背景常显；hover 使用 `bg-foreground/30`（dark 下同理）显示深色反馈。
 - 资产推荐为纯函数；平台推断先看 `.exe/.dmg/.pkg/.appimage/.deb/.rpm/.apk/.ipa`
   等已知后缀，再看文件名平台词。评分区分格式优先级、平台匹配/冲突和架构匹配/冲突，
   `yml/yaml/json/xml` 等配置文件作为独立类型展示，不会参与默认推荐或压过真实

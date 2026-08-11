@@ -156,11 +156,14 @@ export default function DownloadPage() {
   }).toString();
   return (
     <div className="mx-auto w-full max-w-5xl space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-col items-start gap-2">
         <Link
           to="/"
           onClick={reset}
-          className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+          className={cn(
+            buttonVariants({ variant: 'ghost', size: 'sm' }),
+            'bg-muted hover:bg-foreground/30 dark:bg-muted/50 dark:hover:bg-foreground/30'
+          )}
         >
           <ArrowLeft aria-hidden="true" />
           Search another repository

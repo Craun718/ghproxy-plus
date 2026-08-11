@@ -5,6 +5,7 @@ import apiDocumentationUrl from '@/assets/api.md';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export default function DocsPage() {
   const [content, setContent] = useState('');
@@ -34,7 +35,13 @@ export default function DocsPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl">
-      <Link to="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+      <Link
+        to="/"
+        className={cn(
+          buttonVariants({ variant: 'ghost', size: 'sm' }),
+          'bg-muted hover:bg-foreground/30 dark:bg-muted/50 dark:hover:bg-foreground/30'
+        )}
+      >
         <ArrowLeft aria-hidden="true" />
         Back to downloads
       </Link>
