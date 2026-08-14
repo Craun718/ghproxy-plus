@@ -3,7 +3,7 @@
 ## 文档状态
 
 - 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
-  当前 origin 已完成
+  当前 origin 已完成；P16 Safari 真实部署下载路由待实施
 - 最近更新：2026-08-14
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -616,6 +616,27 @@ pnpm build
   `window.location.origin`，使开发与部署环境的协议、域名和端口自动匹配。
 - P1：补充 `/docs` 回归覆盖并运行全部质量门禁，同步本文档与 `TODO.md`。
 
+### P16：Safari 真实部署下载路由（待实施）
+
+已在 `https://gpp.natsuu.top` 的真实部署上稳定复现：Safari 在 `/download`
+点击 Download 后，顶层导航到 `/api/ghproxy/...` 会被 Cloudflare Assets 的
+`single-page-application` fallback 接管，返回 SPA HTML，而不是文件字节；
+`~/Downloads` 不会出现新文件。同一 URL 通过 `fetch()` 发出时 Worker 返回
+200 `application/octet-stream` 和 `Content-Disposition: attachment`，blob
+下载可以落盘，因此 CSP 错误不是本次失败原因。
+
+- P0：在 `wrangler.jsonc` 的 `assets` 中增加 `run_worker_first: ["/api/*"]`，
+  确保 `/api/ghproxy/*` 先进入 Worker，再由静态资产 SPA fallback 处理未知
+  前端路由。
+- P1：`src/api/ghproxy.ts` 需要兼容 Cloudflare 文档导航重写后的编码路径，
+  例如 `https%3A/github.com/...` 或 `https%3A%2F%2Fgithub.com/...`；现有
+  `.replace(/^https?:\/+/, 'https://')` 只能处理原始 `https://...` 形式。
+  增加纯函数归一化和单元回归，覆盖原始、编码冒号和编码斜杠三种路径。
+- P2：补充真实部署验证脚本，用 Safari WebDriver 点击 Download，确认
+  `~/Downloads` 出现对应文件且页面不跳转到 SPA HTML。
+- P3：用户完成 Wrangler 认证后部署，再用真实部署重新跑 Safari 验证；通过后
+  同步 README、本文档与 `TODO.md`。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -645,6 +666,9 @@ pnpm build
   名称完成配置解析；Wrangler 配置不得继续使用旧名称 `gpp-hono`。
 - GitHub 代理下载在直接响应和 CDN 重定向后都使用安全的原始文件名，并强制附件
   下载；Unicode 与恶意文件名不会造成乱码、路径逃逸或 header 注入。
+- 真实部署的顶层文档导航下载必须由 Worker 处理 `/api/ghproxy/*`，不能被
+  Cloudflare Assets SPA fallback 接管；Safari 点击 Download 应直接在
+  `~/Downloads` 出现文件，而不是跳转后渲染 SPA HTML。
 - Release/Asset 可以通过 Base UI Combobox 搜索，保留现有分组、元数据、推荐、URL
   恢复和 Zustand 单向状态流；设备匹配不隐藏其他资产，单 Release 仍可下载，空搜索
   不会改变选择。

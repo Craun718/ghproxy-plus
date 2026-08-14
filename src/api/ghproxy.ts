@@ -59,6 +59,18 @@ function checkUrl(url: string): boolean {
   return combinedExp.test(url);
 }
 
+// Cloudflare Assets rewrites top-level document navigation to percent-encoded
+// upstream URLs such as `https%3A/github.com/...` or
+// `https%3A%2F%2Fgithub.com/...`; normalize both forms for the proxy fetcher.
+export function normalizeGhProxyPath(path: string): string {
+  if (/^(?:https?)(?:%3a|%3A)/i.test(path)) {
+    return `https://${path
+      .replace(/^(?:https?)(?:%3a|%3A)/i, '')
+      .replace(/^(?:%2f|\/)+/i, '')}`;
+  }
+  return path.replace(/^https?:\/+/, 'https://');
+}
+
 export async function ghproxy(c: Context) {
   const urlStr = c.req.url;
   const urlObj = new URL(urlStr);
@@ -70,9 +82,9 @@ export async function ghproxy(c: Context) {
     );
   }
   // cfworker 会把路径中的 `//` 合并成 `/`
-  path = urlObj.href
-    .slice(urlObj.origin.length + GHPROXY_PATH.length)
-    .replace(/^https?:\/+/, 'https://');
+  path = normalizeGhProxyPath(
+    urlObj.href.slice(urlObj.origin.length + GHPROXY_PATH.length)
+  );
 
   const combinedExp = new RegExp(
     `^(${exp1.source}|${exp3.source}|${exp5.source}|${exp6.source})`

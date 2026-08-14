@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDownloadContentDisposition, ghproxy } from './ghproxy';
+import {
+  createDownloadContentDisposition,
+  ghproxy,
+  normalizeGhProxyPath
+} from './ghproxy';
 
 function createApp() {
   const app = new Hono();
@@ -17,6 +21,63 @@ afterEach(() => {
 });
 
 describe('GitHub proxy downloads', () => {
+  it('normalizes raw and Cloudflare-encoded proxy paths', () => {
+    expect(
+      normalizeGhProxyPath(
+        'https://github.com/owner/repo/releases/download/v1/asset.zip'
+      )
+    ).toBe('https://github.com/owner/repo/releases/download/v1/asset.zip');
+    expect(
+      normalizeGhProxyPath(
+        'https%3A/github.com/owner/repo/releases/download/v1/asset.zip'
+      )
+    ).toBe('https://github.com/owner/repo/releases/download/v1/asset.zip');
+    expect(
+      normalizeGhProxyPath(
+        'https%3A%2F%2Fgithub.com/owner/repo/releases/download/v1/asset.zip'
+      )
+    ).toBe('https://github.com/owner/repo/releases/download/v1/asset.zip');
+    expect(
+      normalizeGhProxyPath(
+        'https%3A%2Fgithub.com/owner/repo/releases/download/v1/asset.zip'
+      )
+    ).toBe('https://github.com/owner/repo/releases/download/v1/asset.zip');
+    expect(
+      normalizeGhProxyPath(
+        'http%3A%2F%2Fgithub.com/owner/repo/releases/download/v1/asset.zip'
+      )
+    ).toBe('https://github.com/owner/repo/releases/download/v1/asset.zip');
+  });
+
+  it('serves Cloudflare document-navigation paths as downloads', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('asset', {
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    for (const target of [
+      'https%3A/github.com/owner/repo/releases/download/v1/asset.zip',
+      'https%3A%2F%2Fgithub.com/owner/repo/releases/download/v1/asset.zip'
+    ]) {
+      const response = await requestProxy(target);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-disposition')).toBe(
+        `attachment; filename="asset.zip"; filename*=UTF-8''asset.zip`
+      );
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://github.com/owner/repo/releases/download/v1/asset.zip'
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      'https://github.com/owner/repo/releases/download/v1/asset.zip'
+    );
+  });
+
   it('forces a direct range response to use the original encoded filename', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response('partial', {
