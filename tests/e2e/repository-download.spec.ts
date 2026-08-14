@@ -431,7 +431,9 @@ test('queries, switches assets, copies and restores URL state', async ({
   expect(webVitals.inp).toBeLessThan(200);
 });
 
-test('starts the selected proxy download', async ({ page }) => {
+test('starts the selected proxy download and keeps feedback outside the card', async ({
+  page
+}) => {
   await page.route('**/api/ghproxy/**', (route) =>
     route.fulfill({
       status: 200,
@@ -451,6 +453,24 @@ test('starts the selected proxy download', async ({ page }) => {
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toBe('app-测试.zip');
+
+  const feedback = page.getByText(
+    'Download started. If it was blocked, try copying the link.'
+  );
+  await expect(feedback).toBeVisible();
+  await expect(
+    page.locator('[data-slot="card"]').first().locator('output')
+  ).toHaveCount(0);
+
+  const downloadBox = await page
+    .getByRole('button', { name: 'Download' })
+    .boundingBox();
+  const feedbackBox = await feedback.boundingBox();
+  if (!downloadBox || !feedbackBox) {
+    throw new Error('Download action and feedback must have layout boxes.');
+  }
+
+  expect(feedbackBox.y).toBeGreaterThan(downloadBox.y + downloadBox.height - 1);
 });
 
 test('filters large release and asset collections without leaking search state', async ({

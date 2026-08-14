@@ -183,97 +183,107 @@ export function RecommendedAsset({
       : 'Likely match';
 
   return (
-    <Card size="sm" className="ring-primary/30">
-      <RepositoryContext repository={repository} release={release} />
-      <div className="flex min-w-0 flex-col gap-(--card-spacing) lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-x-(--card-spacing)">
-        <CardHeader className="lg:pr-0">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="flex size-11 items-center justify-center rounded-full bg-primary/12 text-primary">
-              <ShieldCheck className="size-5" aria-hidden="true" />
-            </span>
-            <Badge variant={isManualSelection ? 'outline' : 'default'}>
-              {confidence}
-            </Badge>
+    <>
+      <Card size="sm" className="ring-primary/30">
+        <RepositoryContext repository={repository} release={release} />
+        <div className="flex min-w-0 flex-col gap-(--card-spacing) lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-x-(--card-spacing)">
+          <CardHeader className="lg:pr-0">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="flex size-11 items-center justify-center rounded-full bg-primary/12 text-primary">
+                <ShieldCheck className="size-5" aria-hidden="true" />
+              </span>
+              <Badge variant={isManualSelection ? 'outline' : 'default'}>
+                {confidence}
+              </Badge>
+            </div>
+            <CardTitle className="break-all">{asset.name}</CardTitle>
+            <CardDescription>
+              {isManualSelection
+                ? 'You selected this file manually.'
+                : recommendation?.reasons.join(' · ') ||
+                  'Recommended release asset'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="lg:pl-0">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-muted-foreground">Platform</dt>
+                <dd className="mt-1 font-medium">
+                  {titleCase(asset.platform)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Architecture</dt>
+                <dd className="mt-1 font-medium">
+                  {titleCase(asset.architecture)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Format</dt>
+                <dd className="mt-1 font-medium">{titleCase(asset.format)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Size</dt>
+                <dd className="mt-1 font-medium">{formatBytes(asset.size)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Release</dt>
+                <dd className="mt-1 font-medium">{release.tagName}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Published</dt>
+                <dd className="mt-1 font-medium">
+                  {formatDate(release.publishedAt)}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </div>
+        <CardFooter className="flex-col items-stretch border-t">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              size="lg"
+              className="min-h-11 flex-1"
+              onClick={handleDownload}
+            >
+              <Download aria-hidden="true" />
+              Download
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="min-h-11 flex-1"
+              onClick={handleCopy}
+            >
+              <Clipboard aria-hidden="true" />
+              Copy proxy link
+            </Button>
           </div>
-          <CardTitle className="break-all">{asset.name}</CardTitle>
-          <CardDescription>
-            {isManualSelection
-              ? 'You selected this file manually.'
-              : recommendation?.reasons.join(' · ') ||
-                'Recommended release asset'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="lg:pl-0">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-muted-foreground">Platform</dt>
-              <dd className="mt-1 font-medium">{titleCase(asset.platform)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Architecture</dt>
-              <dd className="mt-1 font-medium">
-                {titleCase(asset.architecture)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Format</dt>
-              <dd className="mt-1 font-medium">{titleCase(asset.format)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Size</dt>
-              <dd className="mt-1 font-medium">{formatBytes(asset.size)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Release</dt>
-              <dd className="mt-1 font-medium">{release.tagName}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Published</dt>
-              <dd className="mt-1 font-medium">
-                {formatDate(release.publishedAt)}
-              </dd>
-            </div>
-          </dl>
-        </CardContent>
-      </div>
-      <CardFooter className="flex-col items-stretch gap-2 border-t sm:flex-row">
-        <Button size="lg" className="min-h-11 flex-1" onClick={handleDownload}>
-          <Download aria-hidden="true" />
-          Download
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="min-h-11 flex-1"
-          onClick={handleCopy}
+        </CardFooter>
+      </Card>
+      {feedback ? (
+        <output
+          className={`flex w-full items-start gap-2 text-sm ${
+            feedback.kind === 'error' ? 'text-destructive' : 'text-foreground'
+          }`}
+          role={feedback.kind === 'error' ? 'alert' : undefined}
+          aria-live={feedback.kind === 'success' ? 'polite' : undefined}
         >
-          <Clipboard aria-hidden="true" />
-          Copy proxy link
-        </Button>
-        {feedback ? (
-          <output
-            className={`flex items-start gap-2 text-sm sm:basis-full ${
-              feedback.kind === 'error' ? 'text-destructive' : 'text-foreground'
-            }`}
-            role={feedback.kind === 'error' ? 'alert' : undefined}
-            aria-live={feedback.kind === 'success' ? 'polite' : undefined}
-          >
-            {feedback.kind === 'error' ? (
-              <TriangleAlert
-                className="mt-0.5 size-4 shrink-0"
-                aria-hidden="true"
-              />
-            ) : (
-              <Check
-                className="mt-0.5 size-4 shrink-0 text-primary"
-                aria-hidden="true"
-              />
-            )}
-            {feedback.message}
-          </output>
-        ) : null}
-      </CardFooter>
-    </Card>
+          {feedback.kind === 'error' ? (
+            <TriangleAlert
+              className="mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+          ) : (
+            <Check
+              className="mt-0.5 size-4 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+          )}
+          {feedback.message}
+        </output>
+      ) : null}
+    </>
   );
 }

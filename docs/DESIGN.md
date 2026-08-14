@@ -279,7 +279,9 @@ idle -> validating -> loading -> ready
 无效或被撤销的 Token 必须与匿名限流区分，提供可恢复的认证错误，不得回显 Token。
 
 错误文案不得都使用“Failed to fetch releases”。Clipboard 被拒绝或下载启动失败时，
-必须在对应操作附近提供可恢复反馈；Toast 只能作为补充，不能承载唯一结果。
+必须在对应操作附近提供可恢复反馈；操作反馈必须位于结果卡外部、独占一行，
+显示在 Download / Copy proxy link 操作行下方，不得与按钮共享同一行。Toast
+只能作为补充，不能承载唯一结果。
 
 ## 5. 前端架构
 
@@ -726,7 +728,8 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
 - `/download` 结果页使用紧凑垂直节奏；`ready` 状态由单一结果卡承载仓库上下文、
   推荐资产、仅源码提示和下载/复制操作，`empty-release` 等非 `ready` 回退状态仍使用
   仓库摘要卡。RecommendedAsset 在桌面将包概览与属性左右分栏，高级选择桌面并排，
-  下载/复制操作保持底部布局和 44px 触屏目标。
+  下载/复制操作保持底部布局和 44px 触屏目标；操作反馈位于结果卡外部、独占一行
+  并显示在操作行下方，不与按钮共享同一行。
 - `/download` 的 `Search another repository` 与 `/docs` 的 `Back to downloads`
   使用 `ghost`/`sm` 按钮样式，并默认叠加 `bg-muted`（dark 下 `bg-muted/50`），
   浅色背景常显；hover 使用 `bg-foreground/30`（dark 下同理）显示深色反馈。

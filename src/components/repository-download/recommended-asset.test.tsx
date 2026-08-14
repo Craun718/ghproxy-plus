@@ -56,7 +56,7 @@ afterEach(() => {
 });
 
 describe('RecommendedAsset', () => {
-  it('keeps clipboard rejection feedback next to the action', async () => {
+  it('keeps clipboard rejection feedback outside the card', async () => {
     const writeText = vi.fn().mockRejectedValue(new Error('denied'));
     const user = userEvent.setup();
     Object.defineProperty(navigator, 'clipboard', {
@@ -81,9 +81,9 @@ describe('RecommendedAsset', () => {
     await user.click(screen.getByRole('button', { name: 'Copy proxy link' }));
 
     expect(writeText).toHaveBeenCalledOnce();
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Clipboard access was denied'
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Clipboard access was denied');
+    expect(alert.closest('[data-slot="card"]')).toBeNull();
   });
 
   it('does not expose a download action without a selected asset', () => {
