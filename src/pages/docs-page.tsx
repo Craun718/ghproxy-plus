@@ -5,6 +5,7 @@ import apiDocumentationUrl from '@/assets/api.md';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { resolveApiDocumentationContent } from '@/lib/api-documentation';
 import { cn } from '@/lib/utils';
 
 export default function DocsPage() {
@@ -19,7 +20,11 @@ export default function DocsPage() {
         if (!response.ok) throw new Error('Documentation request failed.');
         return response.text();
       })
-      .then(setContent)
+      .then((content) =>
+        setContent(
+          resolveApiDocumentationContent(content, window.location.origin)
+        )
+      )
       .catch((loadError: unknown) => {
         if (
           loadError instanceof DOMException &&

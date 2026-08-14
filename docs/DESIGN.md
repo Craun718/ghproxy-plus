@@ -2,9 +2,9 @@
 
 ## 文档状态
 
-- 状态：当前工作区权威方案（Source of Truth）；P14 返回入口浅色常显与深色
-  hover 已完成
-- 最近更新：2026-08-11
+- 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
+  当前 origin 已完成
+- 最近更新：2026-08-14
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -190,6 +190,9 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 
 API 文档迁移为独立 `/docs` 页面，不再在主页初始化时下载 Markdown，也不使用底部
 Drawer 承载桌面端长文档。
+
+API 文档中的 `/api/ping` curl 示例使用当前浏览器 origin 动态生成，不再展示
+`https://[host]` 占位符；开发与部署环境的协议、域名和端口保持一致。
 
 浏览器文档标题固定为 `GitHub Proxy Plus`。主页空状态使用
 `noctisynth/semifold` 作为可点击示例仓库。
@@ -607,6 +610,12 @@ pnpm build
 - P1：通过 Biome、typecheck、单元/组件测试和构建门禁，并同步本文档与
   `TODO.md`。
 
+### P15：API 文档 ping 示例动态使用当前 origin（已完成）
+
+- P0：将 `/docs` 中 `curl https://[host]/api/ping` 的静态占位符替换为当前
+  `window.location.origin`，使开发与部署环境的协议、域名和端口自动匹配。
+- P1：补充 `/docs` 回归覆盖并运行全部质量门禁，同步本文档与 `TODO.md`。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -648,6 +657,8 @@ pnpm build
   无自动匹配时高级选择自动展开，桌面端 Release/Asset 并排，移动端上下排列。
 - 浏览器直接请求 GitHub Repository/Releases API，Worker 不再暴露 `/api/repos` 或
   `/api/download`；组件与 Zustand 仍只接收归一化的项目响应模型。
+- `/docs` 中 `/api/ping` 的 curl 示例使用当前浏览器 origin，不再出现 `[host]`
+  占位符。
 - CI 的类型检查、lint、测试、构建和必要 E2E 全部通过。
 - README、`DESIGN.md`、`TODO.md` 与实际实现一致。
 
@@ -686,7 +697,8 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
   Release/Asset 选择全部位于该结果页；高级选择器随结果页静态加载，不进入首页
   初始 JavaScript。
 - `/docs` 使用路由懒加载，Worker 静态资源启用 SPA fallback，主页不加载 API
-  Markdown。
+  Markdown；API 文档的 `/api/ping` curl 示例在渲染前将 `https://[host]` 替换为
+  当前 `window.location.origin`。
 - `/download` 结果页使用紧凑垂直节奏；`ready` 状态由单一结果卡承载仓库上下文、
   推荐资产、仅源码提示和下载/复制操作，`empty-release` 等非 `ready` 回退状态仍使用
   仓库摘要卡。RecommendedAsset 在桌面将包概览与属性左右分栏，高级选择桌面并排，

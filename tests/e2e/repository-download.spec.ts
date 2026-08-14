@@ -690,5 +690,9 @@ test('loads API Markdown only on the lazy docs route', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'ghproxy plus API' })
   ).toBeVisible();
+  await expect(
+    page.getByText('curl http://127.0.0.1:3000/api/ping')
+  ).toBeVisible();
+  await expect(page.getByText('[host]')).toHaveCount(0);
   expect(markdownRequests).toHaveLength(1);
 });
