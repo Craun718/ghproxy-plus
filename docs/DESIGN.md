@@ -414,7 +414,8 @@ Release 页面解析兜底：
 - 只允许解析匹配当前 `owner/repo` 的 GitHub Release 下载链接；源码归档可以按
   已解析 tag 稳定重建。
 - 该兜底只承诺最新 Release，不提供完整 Release 历史、仓库描述、默认分支或下载
-  次数；这些字段允许为空值。用户必须通过 UI notice 得知当前结果来自页面解析。
+  次数；这些字段允许为空值。前端只通过 `console.warn` 记录当前结果来自页面解析，
+  不得把该信息放进 UI notice 或其他页面文案。
 - Token 不发送给 `/api/ghproxy/` 或 GitHub 页面；页面解析失败时保留原 API 限流
   错误语义。
 
@@ -662,7 +663,7 @@ pnpm build
   `/api/ghproxy/` 获取 `/releases/latest` 页面。
 - P1：已解析最新 tag 与 `expanded_assets` 片段中的当前仓库下载链接，按 tag 重建
   源码归档，并复用既有资产分类、推荐、选择和代理下载流。
-- P2：已补充 API 兜底、跨仓库链接拒绝、解析失败错误保持、模型 notice 与 URL
+- P2：已补充 API 兜底、跨仓库链接拒绝、解析失败错误保持、前端日志警告与 URL
   恢复回归；Token 不会进入页面请求。
 - P3：已通过 Biome、typecheck、相关测试和构建门禁，并同步本文档与 `TODO.md`。
 

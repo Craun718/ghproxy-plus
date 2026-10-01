@@ -66,18 +66,13 @@ const initialState = {
   userAgent: ''
 };
 
-const releasePageNotice =
+const releasePageWarning =
   'GitHub API was rate-limited, so the latest release was parsed from its GitHub page.';
 
-function combineNotice(
-  dataSource: RepositoryDataSource | null,
-  selectionNotice: string | null
-): string | null {
-  if (dataSource !== 'release-page') return selectionNotice;
-
-  return selectionNotice
-    ? `${releasePageNotice} ${selectionNotice}`
-    : releasePageNotice;
+function logRepositoryDataSource(dataSource: RepositoryDataSource) {
+  if (dataSource === 'release-page') {
+    console.warn(releasePageWarning);
+  }
 }
 
 function normalizeError(error: unknown): RepositoryError {
@@ -184,6 +179,8 @@ export function createRepositoryDownloadModel(
 
         if (currentRequestId !== requestId) return;
 
+        logRepositoryDataSource(response.dataSource);
+
         if (response.releases.length === 0) {
           set({
             status: 'empty',
@@ -193,7 +190,7 @@ export function createRepositoryDownloadModel(
               code: 'empty-release',
               message: 'This repository has no releases or downloadable branch.'
             },
-            notice: combineNotice(response.dataSource, null)
+            notice: null
           });
           return;
         }
@@ -210,7 +207,7 @@ export function createRepositoryDownloadModel(
             dataSource: response.dataSource,
             releases: response.releases,
             selectedReleaseId: selectedRelease?.id ?? null,
-            notice: combineNotice(response.dataSource, null),
+            notice: null,
             error: {
               code: 'empty-asset',
               message: 'The selected release has no downloadable assets.'
@@ -245,7 +242,7 @@ export function createRepositoryDownloadModel(
           selectedAssetId: restoredAsset?.id ?? recommendation.assetId ?? null,
           recommendation,
           error: null,
-          notice: combineNotice(response.dataSource, selectionNotice)
+          notice: selectionNotice
         });
       } catch (error) {
         if (
@@ -270,7 +267,7 @@ export function createRepositoryDownloadModel(
         selectedReleaseId: release.id,
         selectedAssetId: recommendation.assetId,
         recommendation,
-        notice: get().dataSource === 'release-page' ? releasePageNotice : null,
+        notice: null,
         error:
           release.assets.length === 0
             ? {
@@ -289,7 +286,7 @@ export function createRepositoryDownloadModel(
         status: 'ready',
         selectedAssetId: assetId,
         error: null,
-        notice: get().dataSource === 'release-page' ? releasePageNotice : null
+        notice: null
       });
     },
 
