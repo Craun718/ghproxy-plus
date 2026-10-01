@@ -252,7 +252,7 @@ async function observeWebVitals(page: Page) {
         }
       }).observe({ type: 'event', buffered: true, durationThreshold: 16 });
     } catch {
-      // A missing observer type reports zero and remains covered by bundle/E2E gates.
+      // A missing observer type reports zero and remains covered by E2E gates.
     }
   });
 }

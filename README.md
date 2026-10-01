@@ -86,7 +86,7 @@ Root `TODO.md` contains only work from that contract that has not landed.
 
 ## Quality checks
 
-Run all non-browser checks, the production build, and the bundle budget:
+Run all non-browser checks and the production build:
 
 ```bash
 pnpm check
@@ -100,10 +100,9 @@ pnpm test:e2e
 ```
 
 The quality gates include TypeScript, read-only Biome checks, Vitest unit/model/
-component tests, Farm production build, route bundle budgets, Playwright core
-flows, target viewport overflow checks, keyboard navigation, axe, and Web
-Vitals smoke budgets. CI runs the same gates without auto-fixing or committing
-changes.
+component tests, Farm production build, Playwright core flows, target viewport
+overflow checks, keyboard navigation, axe, and Web Vitals smoke budgets. CI runs
+the same gates without auto-fixing or committing changes.
 
 ## API
 

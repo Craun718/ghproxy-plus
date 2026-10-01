@@ -25,4 +25,10 @@ describe('parseRepositoryInput', () => {
   it('rejects incomplete identifiers', () => {
     expect(() => parseRepositoryInput('owner')).toThrow('owner/repo');
   });
+
+  it('rejects invalid repository identifiers', () => {
+    expect(() => parseRepositoryInput('owner/repo!')).toThrow(
+      'Enter a GitHub repository as owner/repo'
+    );
+  });
 });

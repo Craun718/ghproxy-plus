@@ -1,13 +1,15 @@
-import { z } from 'zod/mini';
+import { maxLength, minLength, regex, z } from 'zod/mini';
 import type { RepositoryIdentifier } from './repository-download-types';
 
 const repositorySegmentSchema = z
   .string()
-  .min(1)
-  .max(100)
-  .regex(
-    /^[a-zA-Z0-9_.-]+$/,
-    'Repository names can only contain letters, numbers, dots, dashes and underscores.'
+  .check(
+    minLength(1),
+    maxLength(100),
+    regex(
+      /^[a-zA-Z0-9_.-]+$/,
+      'Repository names can only contain letters, numbers, dots, dashes and underscores.'
+    )
   );
 
 export const repositoryIdentifierSchema = z.object({

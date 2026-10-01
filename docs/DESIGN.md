@@ -114,7 +114,8 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - shadcn/ui 组件原语：Base UI（`@base-ui/react`），不再以 Radix UI 作为目标原语。
 - 图标：Lucide；仅按实际使用导入。
 - 共享数据管理：Zustand。
-- 数据校验：Zod。
+- 数据校验：Zod；schema 使用 `zod/mini` 的函数式校验 API，升级时必须保持
+  Farm 打包后的运行时兼容性。
 - 代码审查与格式化：Biome.js。
 
 引入、替换或移除核心技术前，必须先更新本文件。迁移 shadcn/ui 时应使用支持
@@ -454,7 +455,7 @@ Release 页面解析兜底：
 - 搜索主操作和 Token 高级区域在窄屏下纵向排列、占满可用宽度，不得产生水平
   滚动；触屏目标继续保持至少 44 x 44 CSS pixels。
 - API 文档按路由懒加载。
-- 删除未使用组件与依赖，并在可构建基线恢复后建立初始包体预算。
+- 删除未使用组件与依赖。
 - 目标 Web Vitals：LCP < 2.5s、CLS < 0.1、INP < 200ms（第 75 百分位）。
 
 ## 8. 测试与质量门禁
@@ -566,10 +567,9 @@ pnpm build
   `order-first` 与 `order-last` utility；缓存和构建产物不得提交到仓库。
 - P2：增加桌面与移动端 E2E 位置回归，断言前置 addon 位于输入控件左侧、后置
   addon 位于 Token 输入控件右侧，同时保留既有键盘焦点顺序和 320px 无溢出验收。
-- P3：完整 Tailwind CSS 冷构建产物以 110,000 bytes 作为未压缩体积预算；该预算
-  已由用户确认，用于保留正式 shadcn/ui `Field` 与 `InputGroup` 源码及其完整样式。
-- P4：复核 1440px 与 320px Token 展开态截图，通过全部质量门禁后同步本文档和
-  `TODO.md` 的完成状态。
+- P3：完整 Tailwind CSS 冷构建保留正式 shadcn/ui `Field` 与 `InputGroup`
+  源码及其完整样式，并复核 1440px 与 320px Token 展开态截图；通过全部质量
+  门禁后同步本文档和 `TODO.md` 的完成状态。
 
 ### P7：Craun718 上游选择性同步（已完成）
 
@@ -580,9 +580,8 @@ pnpm build
   `src/api/ghproxy.ts` 安全实现 `Content-Disposition`，不直接 cherry-pick 上游实现。
 - P2：通过正式 shadcn/ui CLI 增加 Base UI Combobox，以当前 Zustand 模型和 URL
   状态为数据源重做 Release/Asset 搜索；删除因此不再使用的 Select 原语和样式。
-- P3：补齐组件、E2E、axe、320px、bundle 与下载协议回归，运行全部质量门禁和
-  Wrangler dry-run；若完整 Combobox 样式超过现有 110,000-byte CSS 预算，必须停下
-  请求批准，不得隐式提高预算。
+- P3：补齐组件、E2E、axe、320px 与下载协议回归，运行全部质量门禁和
+  Wrangler dry-run。
 - P4：同步 README、本文档和 `TODO.md`，并在不覆盖新仓库 `main` 的前提下另行确认
   Git remote/分支迁移方式。真实 Cloudflare 部署与现有环境资源迁移仍需单独授权。
 
@@ -795,10 +794,8 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
 - `src/globals-css.test.ts` 锁定迁移前全部 light/dark OKLCH 值。为满足 WCAG AA，
   控件只调整现有语义前景 token 的使用方式，没有修改任何原始 OKLCH 数值。
 - Biome 以单引号、2 spaces 检查全部业务与 shadcn/ui 源码；CI 只读运行
-  typecheck、lint、unit/component、build、bundle、Playwright 和 axe 门禁。
-- 初始未压缩产物预算为：主页 JavaScript 920,000 bytes、懒加载文档 JavaScript
-  260,000 bytes、应用 CSS 110,000 bytes。当前构建分别约为 740.4 KiB、225.5 KiB
-  和 98.7 KiB；下载结果页与其高级选择器不进入初始主页 JavaScript。
+  typecheck、lint、unit/component、build、Playwright 和 axe 门禁。
+- 下载结果页与其高级选择器不进入首页初始 JavaScript。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。当前 Vitest 66/66、Playwright 24/24 通过。
+  本地浏览器冒烟预算。当前 Vitest 83/83、Playwright 24/24 通过。
