@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   TriangleAlert
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ interface RecommendedAssetProps {
   recommendation: AssetRecommendation | null;
   proxyPath: string | null;
   isManualSelection: boolean;
+  children?: ReactNode;
 }
 
 type ActionFeedback =
@@ -88,12 +90,21 @@ export function RecommendedAsset({
   repository,
   recommendation,
   proxyPath,
-  isManualSelection
+  isManualSelection,
+  children
 }: RecommendedAssetProps) {
+  const selectionKey = `${release.id}:${asset?.id ?? 'none'}`;
+  const [feedbackSelectionKey, setFeedbackSelectionKey] =
+    useState(selectionKey);
   const [feedback, setFeedback] = useState<ActionFeedback>(null);
   const hasOnlySourceAssets =
     release.assets.some((item) => item.kind === 'source') &&
     !release.assets.some((item) => item.kind === 'binary');
+
+  if (feedbackSelectionKey !== selectionKey) {
+    setFeedbackSelectionKey(selectionKey);
+    setFeedback(null);
+  }
 
   const handleDownload = () => {
     if (!proxyPath) return;
@@ -172,6 +183,11 @@ export function RecommendedAsset({
             )}
           </div>
         </CardContent>
+        {children ? (
+          <CardFooter className="flex-col items-stretch border-t">
+            {children}
+          </CardFooter>
+        ) : null}
       </Card>
     );
   }
@@ -239,8 +255,9 @@ export function RecommendedAsset({
             </dl>
           </CardContent>
         </div>
-        <CardFooter className="flex-col items-stretch border-t">
-          <div className="flex flex-col gap-2 sm:flex-row">
+        <CardFooter className="flex-col items-stretch gap-4 border-t">
+          {children}
+          <div className="flex flex-col gap-2 sm:flex-row-reverse">
             <Button
               size="lg"
               className="min-h-11 flex-1"

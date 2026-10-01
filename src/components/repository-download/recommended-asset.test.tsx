@@ -110,6 +110,28 @@ describe('RecommendedAsset', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('renders release and asset selection inside the result card', () => {
+    render(
+      <RecommendedAsset
+        asset={asset}
+        release={release}
+        repository={repository}
+        recommendation={recommendation}
+        proxyPath={`/api/ghproxy/${asset.downloadUrl}`}
+        isManualSelection={false}
+      >
+        <div>Release and asset selection</div>
+      </RecommendedAsset>
+    );
+
+    const selection = screen.getByText('Release and asset selection');
+    const footer = selection.closest('[data-slot="card-footer"]');
+    expect(footer).not.toBeNull();
+    expect(footer).toContainElement(
+      screen.getByRole('button', { name: 'Download' })
+    );
+  });
+
   it('explains source-only results inside the no-match card', () => {
     const sourceAsset: RepositoryAsset = {
       ...asset,

@@ -120,6 +120,15 @@ describe('DownloadPage', () => {
       screen.getByRole('link', { name: 'owner/repo' })
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+    const releaseInput = screen.getByLabelText('Release');
+    const assetInput = screen.getByLabelText('Asset');
+    expect(releaseInput.closest('[data-slot="card"]')).not.toBeNull();
+    expect(assetInput.closest('[data-slot="card"]')).not.toBeNull();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Choose another release or file'
+      })
+    ).not.toBeInTheDocument();
   });
 
   it('returns to the search page when the result URL has no repository', async () => {

@@ -1,16 +1,11 @@
-import { ArrowLeft, ChevronDown, CircleAlert, Info } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, CircleAlert, Info } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdvancedSelection from '@/components/repository-download/advanced-selection';
 import { LoadingResult } from '@/components/repository-download/loading-result';
 import { RecommendedAsset } from '@/components/repository-download/recommended-asset';
 import { RepositorySummary } from '@/components/repository-download/repository-summary';
 import { buttonVariants } from '@/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from '@/components/ui/collapsible';
 import {
   createRepositoryUrlSearch,
   useRepositoryUrlState
@@ -67,7 +62,6 @@ function matchesRequestedRepository(
 export default function DownloadPage() {
   const navigate = useNavigate();
   const { initialState, replaceUrlState } = useRepositoryUrlState();
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const resolvedRequest = useRef<string | null>(null);
 
   const status = useRepositoryDownloadModel((state) => state.status);
@@ -145,15 +139,23 @@ export default function DownloadPage() {
     });
   }, [currentRelease?.tagName, repository, replaceUrlState, selectedAssetId]);
 
-  useEffect(() => {
-    if (status === 'ready' && !selectedAssetId) setAdvancedOpen(true);
-  }, [selectedAssetId, status]);
-
   const retrySearch = createRepositoryUrlSearch({
     repo: initialState.repo,
     releaseId: initialState.releaseId,
     assetId: initialState.assetId
   }).toString();
+  const selection =
+    currentRelease && releases.length > 0 ? (
+      <AdvancedSelection
+        releases={releases}
+        currentRelease={currentRelease}
+        selectedReleaseId={selectedReleaseId}
+        selectedAssetId={selectedAssetId}
+        recommendation={recommendation}
+        onSelectRelease={selectRelease}
+        onSelectAsset={selectAsset}
+      />
+    ) : null;
   return (
     <div className="mx-auto w-full max-w-5xl space-y-3">
       <div className="flex flex-col items-start gap-2">
@@ -227,7 +229,6 @@ export default function DownloadPage() {
 
       {currentRelease && repository && status === 'ready' ? (
         <RecommendedAsset
-          key={currentAsset?.id ?? currentRelease.id}
           asset={currentAsset}
           release={currentRelease}
           repository={repository}
@@ -237,37 +238,9 @@ export default function DownloadPage() {
             Boolean(currentAsset) &&
             currentAsset?.id !== recommendation?.assetId
           }
-        />
-      ) : null}
-
-      {currentRelease && releases.length > 0 ? (
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger
-            className={cn(
-              buttonVariants({ variant: 'outline', size: 'sm' }),
-              'min-h-11 w-full justify-between'
-            )}
-          >
-            Choose another release or file
-            <ChevronDown
-              className="transition-transform group-data-panel-open:rotate-180"
-              aria-hidden="true"
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3 rounded-4xl bg-card p-6 shadow-md ring-1 ring-foreground/5 dark:ring-foreground/10">
-            {advancedOpen ? (
-              <AdvancedSelection
-                releases={releases}
-                currentRelease={currentRelease}
-                selectedReleaseId={selectedReleaseId}
-                selectedAssetId={selectedAssetId}
-                recommendation={recommendation}
-                onSelectRelease={selectRelease}
-                onSelectAsset={selectAsset}
-              />
-            ) : null}
-          </CollapsibleContent>
-        </Collapsible>
+        >
+          {selection}
+        </RecommendedAsset>
       ) : null}
     </div>
   );

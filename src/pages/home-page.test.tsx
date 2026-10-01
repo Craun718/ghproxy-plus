@@ -231,11 +231,8 @@ describe('HomePage release states', () => {
     );
     renderApp();
 
-    const user = await submitRepository();
+    await submitRepository();
     await screen.findByRole('button', { name: 'Download' });
-    await user.click(
-      screen.getByRole('button', { name: 'Choose another release or file' })
-    );
 
     expect(
       await screen.findByText(/All 2 releases are available/)

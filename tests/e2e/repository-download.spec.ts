@@ -174,27 +174,13 @@ async function mockGitHubApi(
   });
 }
 
-async function ensureAdvancedSelectionOpen(page: Page) {
-  const trigger = page.getByRole('button', {
-    name: 'Choose another release or file'
-  });
-  await expect(trigger).toBeVisible();
-
-  const combobox = page.getByRole('combobox', { name: 'Release', exact: true });
-
-  // The auto-expand effect fires when the repository resolves with no
-  // auto-selected asset (e.g. no platform match on mobile). Wait briefly for
-  // it to settle so we don't read a stale aria-expanded and toggle the
-  // collapsible closed while the effect is concurrently opening it.
-  const autoOpened = await combobox
-    .waitFor({ state: 'visible', timeout: 2_000 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!autoOpened) {
-    await trigger.click();
-  }
-  await expect(combobox).toBeVisible({ timeout: 20_000 });
+async function ensureAdvancedSelectionVisible(page: Page) {
+  await expect(
+    page.getByRole('combobox', { name: 'Release', exact: true })
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByRole('combobox', { name: 'Asset', exact: true })
+  ).toBeVisible({ timeout: 20_000 });
 }
 
 async function expectInlineAddonPlacement(
@@ -390,7 +376,7 @@ test('queries, switches assets, copies and restores URL state', async ({
   await expect(page).toHaveURL(/repo=owner%2Frepo/);
   await expect(page).toHaveURL(/release=v2\.0\.0/);
 
-  await ensureAdvancedSelectionOpen(page);
+  await ensureAdvancedSelectionVisible(page);
   const assetInput = page.getByRole('combobox', {
     name: 'Asset',
     exact: true
@@ -480,7 +466,7 @@ test('filters large release and asset collections without leaking search state',
   await page.unroute('https://api.github.com/repos/**');
   await mockGitHubApi(page, createLargeRepositoryResponse());
   await page.goto('/download?repo=owner%2Frepo');
-  await ensureAdvancedSelectionOpen(page);
+  await ensureAdvancedSelectionVisible(page);
 
   const releaseInput = page.getByRole('combobox', {
     name: 'Release',
@@ -520,7 +506,7 @@ test('keeps both combobox popups within a 320px viewport', async ({ page }) => {
   await page.unroute('https://api.github.com/repos/**');
   await mockGitHubApi(page, createLargeRepositoryResponse());
   await page.goto('/download?repo=owner%2Frepo');
-  await ensureAdvancedSelectionOpen(page);
+  await ensureAdvancedSelectionVisible(page);
 
   for (const input of [
     page.getByRole('combobox', { name: 'Release', exact: true }),
@@ -567,6 +553,20 @@ test('has no horizontal overflow at target breakpoints', async ({ page }) => {
 
     await page.goto('/download?repo=owner%2Frepo');
     await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
+    const copyBox = await page
+      .getByRole('button', { name: 'Copy proxy link' })
+      .boundingBox();
+    const downloadBox = await page
+      .getByRole('button', { name: 'Download' })
+      .boundingBox();
+    if (!copyBox || !downloadBox) {
+      throw new Error('Download actions must have layout boxes.');
+    }
+    if (viewport.width >= 640) {
+      expect(copyBox.x).toBeLessThan(downloadBox.x);
+    } else {
+      expect(downloadBox.y).toBeLessThan(copyBox.y);
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth
@@ -608,7 +608,7 @@ test('keeps advanced selectors side by side on desktop and stacked on mobile', a
   ]) {
     await page.setViewportSize(viewport);
     await page.goto('/download?repo=owner%2Frepo');
-    await ensureAdvancedSelectionOpen(page);
+    await ensureAdvancedSelectionVisible(page);
 
     const releaseBox = await page
       .getByRole('combobox', { name: 'Release', exact: true })
@@ -661,11 +661,6 @@ test('supports the core keyboard path', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/download\?repo=owner%2Frepo/);
   await expect(page.getByRole('button', { name: 'Download' })).toBeVisible();
-  const advancedTrigger = page.getByRole('button', {
-    name: 'Choose another release or file'
-  });
-  await advancedTrigger.focus();
-  await page.keyboard.press('Enter');
 
   const releaseInput = page.getByRole('combobox', {
     name: 'Release',
