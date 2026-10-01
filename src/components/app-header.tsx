@@ -1,4 +1,4 @@
-import { Github, PackageOpen } from 'lucide-react';
+import { GitFork, PackageOpen } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +38,7 @@ export function AppHeader() {
             className="inline-flex size-11 items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
             aria-label="View ghproxy plus on GitHub"
           >
-            <Github className="size-5" aria-hidden="true" />
+            <GitFork className="size-5" aria-hidden="true" />
           </a>
         </nav>
       </div>

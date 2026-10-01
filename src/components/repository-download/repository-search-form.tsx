@@ -3,7 +3,7 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  Github,
+  GitFork,
   KeyRound,
   LoaderCircle
 } from 'lucide-react';
@@ -96,7 +96,7 @@ export function RepositorySearchForm({
                 aria-invalid={Boolean(errorMessage)}
               />
               <InputGroupAddon align="inline-start">
-                <Github aria-hidden="true" />
+                <GitFork aria-hidden="true" />
               </InputGroupAddon>
             </InputGroup>
             <Button
