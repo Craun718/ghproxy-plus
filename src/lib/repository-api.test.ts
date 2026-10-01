@@ -34,6 +34,16 @@ function releaseResponse(): GitHubRelease[] {
   ];
 }
 
+const tagName = '@scope/cli-v0.3.4';
+const encodedTagName = '%40scope%2Fcli-v0.3.4';
+
+function rateLimitResponse() {
+  return Response.json(
+    { message: 'API rate limit exceeded' },
+    { status: 403, statusText: 'Forbidden' }
+  );
+}
+
 describe('normalizeRepositoryResponse', () => {
   it('falls back to the tag when the release name is empty', () => {
     const releases: GitHubRelease[] = [
@@ -160,6 +170,78 @@ describe('fetchRepository', () => {
     );
   });
 
+  it('parses the latest release page after the GitHub API is rate-limited', async () => {
+    const fetchMock = vi.fn(
+      (input: string | URL | Request, _requestInit?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/releases/latest')) {
+          return Promise.resolve(
+            new Response(
+              `<include-fragment src="https://github.com/owner/repo/releases/expanded_assets/${encodedTagName}"></include-fragment>`,
+              { headers: { 'content-type': 'text/html' } }
+            )
+          );
+        }
+
+        if (url.includes('/expanded_assets/')) {
+          return Promise.resolve(
+            new Response(
+              `<li class="Box-row">
+              <a href="/owner/repo/releases/download/${encodedTagName}/tool-windows-x64.zip">tool</a>
+              <span>1.5 MB</span>
+              <relative-time datetime="2026-09-30T08:00:00Z"></relative-time>
+            </li>`,
+              { headers: { 'content-type': 'text/html' } }
+            )
+          );
+        }
+
+        return Promise.resolve(rateLimitResponse());
+      }
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchRepository('owner', 'repo', {
+      token: 'github_pat_browser-token'
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      'https://api.github.com/repos/owner/repo',
+      'https://api.github.com/repos/owner/repo/releases?per_page=100',
+      '/api/ghproxy/https://github.com/owner/repo/releases/latest',
+      `/api/ghproxy/https://github.com/owner/repo/releases/expanded_assets/${encodedTagName}`
+    ]);
+    expect(fetchMock.mock.calls[2]?.[1]?.headers).toEqual({
+      Accept: 'text/html'
+    });
+    expect(fetchMock.mock.calls[3]?.[1]?.headers).toEqual({
+      Accept: 'text/html'
+    });
+
+    expect(result.dataSource).toBe('release-page');
+    expect(result.repository).toMatchObject({
+      fullName: 'owner/repo',
+      description: null,
+      defaultBranch: ''
+    });
+    expect(result.releases).toHaveLength(1);
+    expect(result.releases[0]).toMatchObject({
+      name: tagName,
+      tagName,
+      publishedAt: '2026-09-30T08:00:00Z'
+    });
+    expect(
+      result.releases[0]?.assets.find(
+        (asset) => asset.name === 'tool-windows-x64.zip'
+      )
+    ).toMatchObject({
+      downloadUrl: `https://github.com/owner/repo/releases/download/${encodedTagName}/tool-windows-x64.zip`,
+      size: 1_572_864
+    });
+    expect(result.releases[0]?.assets).toHaveLength(3);
+  });
+
   it.each([
     [401, 'invalid-token'],
     [403, 'rate-limit'],
@@ -182,6 +264,28 @@ describe('fetchRepository', () => {
     await expect(fetchRepository('owner', 'repo')).rejects.toMatchObject({
       code,
       status
+    });
+  });
+
+  it('keeps the original rate-limit error when page parsing fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request) =>
+        String(input).endsWith('/releases/latest')
+          ? Promise.resolve(
+              new Response('<html><main>Not a release page</main></html>', {
+                headers: { 'content-type': 'text/html' }
+              })
+            )
+          : Promise.resolve(rateLimitResponse())
+      )
+    );
+
+    await expect(fetchRepository('owner', 'repo')).rejects.toMatchObject({
+      code: 'rate-limit',
+      status: 403,
+      message:
+        'GitHub rate limit reached. Wait and try again, or add a token under optional GitHub authentication.'
     });
   });
 

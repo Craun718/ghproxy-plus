@@ -5,6 +5,7 @@ import { parseRepositoryInput } from './repository-download-schema';
 import type {
   AssetRecommendation,
   RepositoryAsset,
+  RepositoryDataSource,
   RepositoryError,
   RepositoryErrorCode,
   RepositoryIdentifier,
@@ -33,6 +34,7 @@ type RepositoryFetcher = typeof fetchRepository;
 export interface RepositoryDownloadModel {
   status: RepositoryDownloadStatus;
   input: string;
+  dataSource: RepositoryDataSource | null;
   repository: RepositorySummary | null;
   releases: RepositoryRelease[];
   selectedReleaseId: string | null;
@@ -53,6 +55,7 @@ export interface RepositoryDownloadModel {
 const initialState = {
   status: 'idle' as const,
   input: '',
+  dataSource: null as RepositoryDataSource | null,
   repository: null,
   releases: [],
   selectedReleaseId: null,
@@ -62,6 +65,20 @@ const initialState = {
   notice: null,
   userAgent: ''
 };
+
+const releasePageNotice =
+  'GitHub API was rate-limited, so the latest release was parsed from its GitHub page.';
+
+function combineNotice(
+  dataSource: RepositoryDataSource | null,
+  selectionNotice: string | null
+): string | null {
+  if (dataSource !== 'release-page') return selectionNotice;
+
+  return selectionNotice
+    ? `${releasePageNotice} ${selectionNotice}`
+    : releasePageNotice;
+}
 
 function normalizeError(error: unknown): RepositoryError {
   if (error instanceof RepositoryApiError) {
@@ -114,6 +131,7 @@ export function createRepositoryDownloadModel(
       set({
         status: 'validating',
         input,
+        dataSource: null,
         repository: null,
         releases: [],
         selectedReleaseId: null,
@@ -144,6 +162,7 @@ export function createRepositoryDownloadModel(
       set({
         status: 'loading',
         input: identifier.fullName,
+        dataSource: null,
         repository: null,
         releases: [],
         selectedReleaseId: null,
@@ -168,11 +187,13 @@ export function createRepositoryDownloadModel(
         if (response.releases.length === 0) {
           set({
             status: 'empty',
+            dataSource: response.dataSource,
             repository: response.repository,
             error: {
               code: 'empty-release',
               message: 'This repository has no releases or downloadable branch.'
-            }
+            },
+            notice: combineNotice(response.dataSource, null)
           });
           return;
         }
@@ -186,8 +207,10 @@ export function createRepositoryDownloadModel(
           set({
             status: 'empty',
             repository: response.repository,
+            dataSource: response.dataSource,
             releases: response.releases,
             selectedReleaseId: selectedRelease?.id ?? null,
+            notice: combineNotice(response.dataSource, null),
             error: {
               code: 'empty-asset',
               message: 'The selected release has no downloadable assets.'
@@ -215,13 +238,14 @@ export function createRepositoryDownloadModel(
 
         set({
           status: 'ready',
+          dataSource: response.dataSource,
           repository: response.repository,
           releases: response.releases,
           selectedReleaseId: selectedRelease.id,
           selectedAssetId: restoredAsset?.id ?? recommendation.assetId ?? null,
           recommendation,
           error: null,
-          notice: selectionNotice
+          notice: combineNotice(response.dataSource, selectionNotice)
         });
       } catch (error) {
         if (
@@ -246,7 +270,7 @@ export function createRepositoryDownloadModel(
         selectedReleaseId: release.id,
         selectedAssetId: recommendation.assetId,
         recommendation,
-        notice: null,
+        notice: get().dataSource === 'release-page' ? releasePageNotice : null,
         error:
           release.assets.length === 0
             ? {
@@ -265,7 +289,7 @@ export function createRepositoryDownloadModel(
         status: 'ready',
         selectedAssetId: assetId,
         error: null,
-        notice: null
+        notice: get().dataSource === 'release-page' ? releasePageNotice : null
       });
     },
 

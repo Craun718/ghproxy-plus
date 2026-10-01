@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 
 const repositoryResponse = {
+  dataSource: 'github-api',
   repository: {
     owner: 'owner',
     name: 'repo',

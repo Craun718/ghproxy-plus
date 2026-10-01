@@ -3,8 +3,9 @@
 ## 文档状态
 
 - 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
-  当前 origin 已完成；P16 Safari 真实部署下载路由待实施
-- 最近更新：2026-08-14
+  当前 origin 已完成；P16 Safari 真实部署下载路由待实施；P17 Release 页面解析
+  兜底已完成
+- 最近更新：2026-10-01
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -401,6 +402,22 @@ GET https://api.github.com/repos/:owner/:repo/releases?per_page=100
 - 同源 `/api/repos/:owner/:repo/releases` 端点与相关 Worker LRU 缓存必须删除，避免
   留下一个默认不可用且可能误收 Token 的入口。
 
+GitHub REST API 被浏览器额度限制（`403`/`429`）时，`repository-api.ts` 会启用
+Release 页面解析兜底：
+
+- 通过现有同源 `/api/ghproxy/https://github.com/:owner/:repo/releases/latest`
+  获取 Release HTML；浏览器不得直接跨域请求 GitHub 页面。
+- `release-page-parser.ts` 从当前 GitHub 页面结构中解析最新 tag，再读取页面声明的
+  `releases/expanded_assets/:tag` 片段获取资产链接、大小和发布时间。
+- 页面解析输出必须回到同一个 `RepositoryResponse` 归一化模型，并标记数据来源；
+  组件与 Zustand 仍不得理解 GitHub HTML。
+- 只允许解析匹配当前 `owner/repo` 的 GitHub Release 下载链接；源码归档可以按
+  已解析 tag 稳定重建。
+- 该兜底只承诺最新 Release，不提供完整 Release 历史、仓库描述、默认分支或下载
+  次数；这些字段允许为空值。用户必须通过 UI notice 得知当前结果来自页面解析。
+- Token 不发送给 `/api/ghproxy/` 或 GitHub 页面；页面解析失败时保留原 API 限流
+  错误语义。
+
 资产推荐算法保持为纯函数，输出资产、匹配理由、置信度和命中的关键词。零命中必须
 返回 `none`，不得回退为数组最后一项。设备信息只影响推荐，不得过滤高级选择中的
 其他平台、架构、源码或校验文件；只有用户在 Asset Combobox 主动输入搜索词时才可
@@ -638,6 +655,16 @@ pnpm build
   `~/Downloads` 出现对应文件且页面不跳转到 SPA HTML。
 - P3：用户完成 Wrangler 认证后部署，再用真实部署重新跑 Safari 验证；通过后
   同步 README、本文档与 `TODO.md`。
+
+### P17：Release 页面解析兜底（已完成）
+
+- P0：已扩展归一化响应的数据来源字段，在 GitHub API `403`/`429` 后通过同源
+  `/api/ghproxy/` 获取 `/releases/latest` 页面。
+- P1：已解析最新 tag 与 `expanded_assets` 片段中的当前仓库下载链接，按 tag 重建
+  源码归档，并复用既有资产分类、推荐、选择和代理下载流。
+- P2：已补充 API 兜底、跨仓库链接拒绝、解析失败错误保持、模型 notice 与 URL
+  恢复回归；Token 不会进入页面请求。
+- P3：已通过 Biome、typecheck、相关测试和构建门禁，并同步本文档与 `TODO.md`。
 
 ## 10. 验收定义
 

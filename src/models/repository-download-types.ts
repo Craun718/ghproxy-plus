@@ -38,9 +38,12 @@ export interface RepositorySummary {
   defaultBranch: string;
 }
 
+export type RepositoryDataSource = 'github-api' | 'release-page';
+
 export interface RepositoryResponse {
   repository: RepositorySummary;
   releases: RepositoryRelease[];
+  dataSource: RepositoryDataSource;
 }
 
 export interface AssetRecommendation {

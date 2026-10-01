@@ -9,6 +9,7 @@ import {
   inferAssetPlatform
 } from './asset-matcher';
 import type { GitHubRelease, GitHubRepository } from './github-types';
+import { parseExpandedAssets, parseReleasePage } from './release-page-parser';
 
 export class RepositoryApiError extends Error {
   constructor(
@@ -27,6 +28,7 @@ interface FetchRepositoryOptions {
 }
 
 const githubApiBaseUrl = 'https://api.github.com';
+const githubPageBaseUrl = 'https://github.com';
 
 function getSourceCodeAssets(
   owner: string,
@@ -138,6 +140,7 @@ export function normalizeRepositoryResponse(
   const [owner = '', name = repository.name] = repository.full_name.split('/');
 
   return {
+    dataSource: 'github-api',
     repository: {
       owner,
       name,
@@ -162,6 +165,67 @@ export function normalizeRepositoryResponse(
   };
 }
 
+async function fetchGitHubPage(url: string, signal?: AbortSignal) {
+  const response = await fetch(`/api/ghproxy/${url}`, {
+    signal,
+    headers: { Accept: 'text/html' }
+  });
+
+  if (!response.ok) {
+    throw new Error('The GitHub release page could not be loaded.');
+  }
+
+  return response.text();
+}
+
+async function fetchRepositoryFromReleasePage(
+  owner: string,
+  repo: string,
+  signal?: AbortSignal
+): Promise<RepositoryResponse> {
+  const repositoryPath = `${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const page = parseReleasePage(
+    await fetchGitHubPage(
+      `${githubPageBaseUrl}/${repositoryPath}/releases/latest`,
+      signal
+    ),
+    owner,
+    repo
+  );
+  const expandedAssets = parseExpandedAssets(
+    await fetchGitHubPage(page.expandedAssetsUrl, signal),
+    owner,
+    repo
+  );
+
+  return {
+    ...normalizeRepositoryResponse(
+      {
+        name: repo,
+        full_name: `${owner}/${repo}`,
+        owner: { login: owner, avatar_url: '' },
+        description: null,
+        default_branch: '',
+        html_url: `${githubPageBaseUrl}/${owner}/${repo}`
+      },
+      [
+        {
+          id: 0,
+          name: page.tagName,
+          tag_name: page.tagName,
+          assets: [
+            ...expandedAssets.assets,
+            ...getSourceCodeAssets(owner, repo, page.tagName)
+          ],
+          prerelease: false,
+          published_at: expandedAssets.publishedAt ?? undefined
+        }
+      ]
+    ),
+    dataSource: 'release-page'
+  };
+}
+
 export async function fetchRepository(
   owner: string,
   repo: string,
@@ -178,16 +242,42 @@ export async function fetchRepository(
     }
   };
 
-  const [repository, githubReleases] = await Promise.all([
-    fetchGitHub<GitHubRepository>(
-      `${githubApiBaseUrl}/repos/${repositoryPath}`,
-      requestInit
-    ),
-    fetchGitHub<GitHubRelease[]>(
-      `${githubApiBaseUrl}/repos/${repositoryPath}/releases?per_page=100`,
-      requestInit
-    )
-  ]);
+  let repository: GitHubRepository;
+  let githubReleases: GitHubRelease[];
+
+  try {
+    [repository, githubReleases] = await Promise.all([
+      fetchGitHub<GitHubRepository>(
+        `${githubApiBaseUrl}/repos/${repositoryPath}`,
+        requestInit
+      ),
+      fetchGitHub<GitHubRelease[]>(
+        `${githubApiBaseUrl}/repos/${repositoryPath}/releases?per_page=100`,
+        requestInit
+      )
+    ]);
+  } catch (error) {
+    if (error instanceof RepositoryApiError && error.code === 'rate-limit') {
+      try {
+        return await fetchRepositoryFromReleasePage(
+          owner,
+          repo,
+          options.signal
+        );
+      } catch (fallbackError) {
+        if (
+          fallbackError instanceof DOMException &&
+          fallbackError.name === 'AbortError'
+        ) {
+          throw fallbackError;
+        }
+
+        throw error;
+      }
+    }
+
+    throw error;
+  }
 
   const releases = githubReleases.map((release) => ({
     ...release,

@@ -9,6 +9,7 @@ import type { RepositoryResponse } from './repository-download-types';
 
 function createResponse(name = 'owner/repo'): RepositoryResponse {
   return {
+    dataSource: 'github-api',
     repository: {
       owner: 'owner',
       name: 'repo',
@@ -55,6 +56,21 @@ describe('repository download model', () => {
     expect(model.getState().status).toBe('ready');
     expect(selectCurrentRelease(model.getState())?.tagName).toBe('v1.0.0');
     expect(selectCurrentAsset(model.getState())?.id).toBe('asset-windows');
+  });
+
+  it('notifies the user when assets came from the release page', async () => {
+    const response = createResponse();
+    response.dataSource = 'release-page';
+    const fetcher = vi.fn().mockResolvedValue(response);
+    const model = createRepositoryDownloadModel(fetcher);
+
+    await model.getState().resolveRepository('owner/repo');
+    model.getState().selectAsset('asset-windows');
+
+    expect(model.getState().dataSource).toBe('release-page');
+    expect(model.getState().notice).toBe(
+      'GitHub API was rate-limited, so the latest release was parsed from its GitHub page.'
+    );
   });
 
   it('restores release and asset selections from URL state', async () => {

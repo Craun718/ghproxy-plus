@@ -48,6 +48,7 @@ function createRelease(
 
 function createResponse(releases: RepositoryRelease[]): RepositoryResponse {
   return {
+    dataSource: 'github-api',
     repository: {
       owner: 'owner',
       name: 'repo',
