@@ -31,7 +31,16 @@ pnpm install --frozen-lockfile
 
 ## Development
 
-Run the frontend-only Farm server on `http://127.0.0.1:3000`:
+Run the full-stack development server on `http://127.0.0.1:3000`:
+
+```bash
+pnpm dev:fullstack
+```
+
+Farm serves the SPA with React/CSS HMR and proxies `/api/*` to Wrangler on
+`127.0.0.1:8787`. Worker source changes are rebuilt by Wrangler.
+
+For frontend-only work, run:
 
 ```bash
 pnpm dev

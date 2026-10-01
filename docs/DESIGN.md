@@ -496,6 +496,21 @@ pnpm build
 核心交互变更还必须运行 E2E。Biome 检查不得自动写入，自动修复只能由开发者在明确
 范围内本地执行后提交。
 
+### 8.3 本地全栈开发工作流
+
+本地全栈调试必须提供单一入口和单一浏览器 origin：
+
+- Farm dev server 固定监听 `http://127.0.0.1:3000`，继续负责 SPA 页面与 React/CSS
+  HMR。
+- Wrangler dev server 固定监听 `http://127.0.0.1:8787`，继续以 Cloudflare Workers
+  运行时执行 `/api/*`，源码变化由 Wrangler 重新构建 Worker。
+- Farm dev server 将 `^/api/` 反向代理到 Wrangler；浏览器和 API 文档只使用
+  `127.0.0.1:3000` 的当前 origin，不得要求前后端分开访问或引入跨域行为。
+- `pnpm dev:fullstack` 必须同时启动两个 dev server，任一进程意外退出时终止另一个，
+  并支持一次 Ctrl-C 同时清理。实现不得为了进程编排新增运行时依赖。
+- 保留 `pnpm dev` 作为纯前端调试入口，保留 `pnpm dev:wrangler` 作为构建产物与
+  Cloudflare Assets fallback 的本地预览入口。
+
 ## 9. 迁移顺序
 
 ### P0：恢复可信基线
