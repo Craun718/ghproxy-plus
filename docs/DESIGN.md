@@ -4,8 +4,8 @@
 
 - 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
   当前 origin 已完成；P16 Safari 真实部署下载路由待实施；P17 Release 页面解析
-  兜底已完成
-- 最近更新：2026-10-01
+  兜底已完成；Zod 标准 API 已恢复
+- 最近更新：2026-10-16
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -114,8 +114,8 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - shadcn/ui 组件原语：Base UI（`@base-ui/react`），不再以 Radix UI 作为目标原语。
 - 图标：Lucide；仅按实际使用导入。
 - 共享数据管理：Zustand。
-- 数据校验：Zod；schema 使用 `zod/mini` 的函数式校验 API，升级时必须保持
-  Farm 打包后的运行时兼容性。
+- 数据校验：使用 Zod 标准入口 `zod` 与完整 schema API；业务 schema 不使用
+  `zod/mini`。
 - 代码审查与格式化：Biome.js。
 
 引入、替换或移除核心技术前，必须先更新本文件。迁移 shadcn/ui 时应使用支持
