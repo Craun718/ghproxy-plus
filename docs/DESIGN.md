@@ -4,7 +4,7 @@
 
 - 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
   当前 origin 已完成；P16 Safari 真实部署下载路由待实施；P17 Release 页面解析
-  兜底已完成；Zod 标准 API 已恢复
+  兜底与 P18 Vite 迁移及跨主版本依赖升级已完成
 - 最近更新：2026-10-16
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
@@ -106,7 +106,7 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 ### 3.1 技术栈
 
 - 运行时：React 19。
-- 构建工具：Farm。
+- 构建工具：Vite。
 - 服务端/API：Hono，部署到 Cloudflare Workers。
 - 样式：Tailwind CSS。
 - UI 体系：shadcn/ui。
@@ -115,7 +115,9 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - 图标：Lucide；仅按实际使用导入。
 - 共享数据管理：Zustand。
 - 数据校验：使用 Zod 标准入口 `zod` 与完整 schema API；业务 schema 不使用
-  `zod/mini`。
+  `zod/mini`。依赖升级允许跨主版本；升级后的 Zod 与 Vite 生产 bundle 必须通过
+  浏览器启动检查。所有依赖升级须保持本方案的技术架构、品牌与交互要求，并通过
+  类型检查、Biome、测试和构建。
 - 代码审查与格式化：Biome.js。
 
 引入、替换或移除核心技术前，必须先更新本文件。迁移 shadcn/ui 时应使用支持
@@ -293,7 +295,7 @@ idle -> validating -> loading -> ready
 
 shadcn/ui 是组件源码分发与 CLI 约定，不规定 `app/`、`features/`、`services/` 等
 应用分层。目录设计必须以 `components.json` 的标准别名为基础，即
-`components`、`ui`、`lib`、`hooks` 和 `utils`，并保留 Farm SPA 现有的入口与页面
+`components`、`ui`、`lib`、`hooks` 和 `utils`，并保留 Vite SPA 现有的入口与页面
 组织。`models/` 是本项目为落实 Zustand 数据模型而增加的唯一领域目录。
 
 目标文件树：
@@ -338,7 +340,7 @@ src/
 - `lib/` 包含 shadcn 工具函数、浏览器 GitHub API client、响应转换和无副作用的
   匹配算法；API 模块不得持有 React 或 Zustand 状态，原始 GitHub 响应不得越过
   该层进入组件。
-- `pages/` 只负责路由级页面组合，保留 Farm SPA 的框架边界。
+- `pages/` 只负责路由级页面组合，保留 Vite SPA 的框架边界。
 - 不为了抽象形式新增 `app/`、`features/`、`services/` 或其他 shadcn/ui 未要求且
   当前规模不需要的顶层目录。
 - 页面不得同时承担请求、缓存、数据转换、推荐算法和完整渲染。
@@ -501,12 +503,13 @@ pnpm build
 
 本地全栈调试必须提供单一入口和单一浏览器 origin：
 
-- Farm dev server 固定监听 `http://127.0.0.1:3000`，继续负责 SPA 页面与 React/CSS
-  HMR。
-- Wrangler dev server 固定监听 `http://127.0.0.1:8787`，继续以 Cloudflare Workers
-  运行时执行 `/api/*`，源码变化由 Wrangler 重新构建 Worker。
-- Farm dev server 将 `^/api/` 反向代理到 Wrangler；浏览器和 API 文档只使用
-  `127.0.0.1:3000` 的当前 origin，不得要求前后端分开访问或引入跨域行为。
+- Vite dev server 默认监听 `http://127.0.0.1:3000`，负责 SPA 页面、React/CSS
+  HMR，并将 `/api/*` 代理到 Wrangler；`VITE_PORT` 可覆盖监听端口。
+- Wrangler dev server 默认监听 `http://127.0.0.1:8787`，继续以 Cloudflare Workers
+  运行时执行 `/api/*`，源码变化由 Wrangler 重新构建 Worker；`WRANGLER_PORT` 可覆盖
+  监听端口，且 Vite 代理必须同步使用该端口。
+- 浏览器和 API 文档只使用 `127.0.0.1:3000` 的当前 origin，不得要求前后端分开
+  访问或引入跨域行为。
 - `pnpm dev:fullstack` 必须同时启动两个 dev server，任一进程意外退出时终止另一个，
   并支持一次 Ctrl-C 同时清理。实现不得为了进程编排新增运行时依赖。
 - 保留 `pnpm dev` 作为纯前端调试入口，保留 `pnpm dev:wrangler` 作为构建产物与
@@ -682,6 +685,19 @@ pnpm build
 - P2：已补充 API 兜底、跨仓库链接拒绝、解析失败错误保持、前端日志警告与 URL
   恢复回归；Token 不会进入页面请求。
 - P3：已通过 Biome、typecheck、相关测试和构建门禁，并同步本文档与 `TODO.md`。
+
+### P18：迁移到 Vite 并升级全部依赖（已完成）
+
+- P0：已用 Vite 和 React 插件替换 Farm，保留 `dist/`、React HMR、全栈开发入口、
+  Wrangler Workers 运行时及 Cloudflare 静态资产部署行为；`/api/*` 由 Vite 代理到
+  Wrangler。开发端口默认值保持为 3000/8787，并支持 `VITE_PORT`、`WRANGLER_PORT`
+  覆盖。
+- P1：已移除 Farm 配置和依赖，升级全部直接依赖与锁文件中的传递依赖，允许跨主版本。
+  Markdown 文档改由 Vite URL asset 导入，保持只在 API 文档路由按需加载。
+- P2：已通过 typecheck、Biome、83 个单元测试、24 个桌面/移动端端到端测试及 Vite
+  生产构建；本地 Vite + Wrangler 页面启动成功，`/api/ping` 代理返回 200。
+- P3：Vite 浏览器启动另有一个未阻断功能的 `/favicon.ico` 404；项目没有 favicon
+  资源。后续可单独补充站点图标。
 
 ## 10. 验收定义
 

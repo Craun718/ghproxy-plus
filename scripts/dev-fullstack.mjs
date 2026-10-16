@@ -4,12 +4,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootDir = fileURLToPath(new URL('../', import.meta.url));
-const farmCli = fileURLToPath(
-  new URL('../node_modules/@farmfe/cli/bin/farm.mjs', import.meta.url)
+const viteCli = fileURLToPath(
+  new URL('../node_modules/vite/bin/vite.js', import.meta.url)
 );
 const wranglerCli = fileURLToPath(
   new URL('../node_modules/wrangler/bin/wrangler.js', import.meta.url)
 );
+const vitePort = process.env.VITE_PORT ?? '3000';
+const wranglerPort = process.env.WRANGLER_PORT ?? '8787';
 
 // Wrangler validates the configured assets directory even when API requests
 // never read the production frontend bundle.
@@ -83,7 +85,7 @@ function start(name, args) {
 process.on('SIGINT', () => stop(0));
 process.on('SIGTERM', () => stop(0));
 
-start('Farm', [farmCli, 'start']);
+start('Vite', [viteCli, '--host', '127.0.0.1', '--port', vitePort]);
 start('Wrangler', [
   wranglerCli,
   'dev',
@@ -92,6 +94,6 @@ start('Wrangler', [
   '--ip',
   '127.0.0.1',
   '--port',
-  '8787',
+  wranglerPort,
   '--live-reload'
 ]);

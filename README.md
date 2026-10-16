@@ -10,7 +10,7 @@ and users should rarely need to scroll vertically. (页面保持首屏设计风�
 
 Canonical repository: [Craun718/ghproxy-plus](https://github.com/Craun718/ghproxy-plus)
 
-The frontend is a React 19 + Farm SPA. Its component layer uses shadcn/ui Luma
+The frontend is a React 19 + Vite SPA. Its component layer uses shadcn/ui Luma
 components generated on Base UI primitives, Tailwind CSS, and the existing
 light/dark OKLCH palette. Shared repository state lives in a Zustand model and
 all GitHub responses are normalized by the browser API client before reaching
@@ -37,7 +37,7 @@ Run the full-stack development server on `http://127.0.0.1:3000`:
 pnpm dev:fullstack
 ```
 
-Farm serves the SPA with React/CSS HMR and proxies `/api/*` to Wrangler on
+Vite serves the SPA with React/CSS HMR and proxies `/api/*` to Wrangler on
 `127.0.0.1:8787`. Worker source changes are rebuilt by Wrangler.
 
 For frontend-only work, run:
@@ -46,7 +46,7 @@ For frontend-only work, run:
 pnpm dev
 ```
 
-The Farm server can query public GitHub repositories directly from the browser.
+The Vite server can query public GitHub repositories directly from the browser.
 To exercise `/api/ghproxy/` downloads as well, build the frontend and run the
 complete Cloudflare Workers application locally with:
 
@@ -100,7 +100,7 @@ pnpm test:e2e
 ```
 
 The quality gates include TypeScript, read-only Biome checks, Vitest unit/model/
-component tests, Farm production build, Playwright core flows, target viewport
+component tests, Vite production build, Playwright core flows, target viewport
 overflow checks, keyboard navigation, axe, and Web Vitals smoke budgets. CI runs
 the same gates without auto-fixing or committing changes.
 

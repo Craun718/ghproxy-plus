@@ -1,7 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import apiDocumentationUrl from '@/assets/api.md';
+import apiDocumentationUrl from '@/assets/api.md?url';
 import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';

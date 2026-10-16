@@ -34,3 +34,6 @@ lerna-debug.log*
 
 # claude
 .claude/settings.local.json
+
+# playwright
+.playwright-mcp
