@@ -5,6 +5,6 @@ import { ping as pingApi } from './ping';
 const apiRouter = new Hono();
 
 apiRouter.get('/ping', pingApi);
-apiRouter.on(['GET', 'HEAD'], '/ghproxy/*', ghproxyApi);
+apiRouter.on(['GET', 'HEAD', 'POST'], '/ghproxy/*', ghproxyApi);
 
 export default apiRouter;

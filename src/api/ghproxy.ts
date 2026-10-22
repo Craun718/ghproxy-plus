@@ -45,7 +45,8 @@ const PREFLIGHT_INIT = {
 const exp1 =
   /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:releases|archive)\/.*$/i;
 const exp2 = /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:blob|raw)\/.*$/i;
-const exp3 = /^(?:https?:\/\/)?github\.com\/.+?\/.+?\/(?:info|git-).*$/i;
+const exp3 =
+  /^(?:https?:\/\/)?github\.com\/[^/?#]+\/[^/?#]+\/(?:info\/refs|git-upload-pack)(?:\?[^#]*)?$/i;
 const exp4 =
   /^(?:https?:\/\/)?raw\.(?:githubusercontent|github)\.com\/.+?\/.+?\/.+?\/.+$/i;
 const exp5 =
@@ -119,7 +120,7 @@ export async function ghproxy(c: Context) {
   }
 }
 
-function httpHandler(req: HonoRequest, pathname: string) {
+async function httpHandler(req: HonoRequest, pathname: string) {
   // preflight
   if (
     req.method === 'OPTIONS' &&
@@ -144,20 +145,52 @@ function httpHandler(req: HonoRequest, pathname: string) {
 
   try {
     const urlObj = new URL(urlStr);
-    const originalFilename = getOriginalFilename(urlObj);
+    const originalFilename = exp3.test(urlObj.href)
+      ? null
+      : getOriginalFilename(urlObj);
 
-    // 根据Content-Type获取请求体
-    let body: Promise<string> | null = null;
-    if (req.header('content-type')) {
-      body = req.text();
+    if (
+      req.method === 'POST' &&
+      (urlObj.hostname !== 'github.com' ||
+        !/^\/[^/]+\/[^/]+\/git-upload-pack$/.test(urlObj.pathname))
+    ) {
+      return new Response('method not allowed', {
+        status: 405,
+        headers: { Allow: 'GET, HEAD' }
+      });
     }
 
-    const reqInit = {
+    if (
+      exp3.test(urlObj.href) &&
+      urlObj.pathname.endsWith('/info/refs') &&
+      urlObj.searchParams.get('service') !== 'git-upload-pack'
+    ) {
+      return new Response('unsupported Git service', { status: 403 });
+    }
+
+    const headers = req.header();
+    const connectionHeaders = (headers.connection ?? '').split(',');
+    for (const name of [
+      ...connectionHeaders,
+      'host',
+      'connection',
+      'keep-alive',
+      'proxy-connection',
+      'te',
+      'trailer',
+      'transfer-encoding',
+      'upgrade',
+      'content-length'
+    ]) {
+      delete headers[name.trim().toLowerCase()];
+    }
+
+    const reqInit: RequestInit = {
       method: req.method,
-      headers: req.header(),
+      headers,
       redirect: 'manual',
-      body: body
-    } as RequestInit;
+      body: req.method === 'POST' ? await req.arrayBuffer() : null
+    };
 
     return proxy(urlObj, reqInit, originalFilename);
   } catch {
@@ -245,14 +278,15 @@ async function proxy(
   if (resHdrNew.has('location')) {
     const _location = resHdrNew.get('location');
     if (_location) {
-      if (checkUrl(_location))
-        resHdrNew.set('location', GHPROXY_PATH + _location);
+      const redirectUrl = new URL(_location, urlObj);
+      if (exp3.test(urlObj.href) && !exp3.test(redirectUrl.href)) {
+        return new Response('unsupported Git redirect', { status: 502 });
+      }
+      if (checkUrl(redirectUrl.href))
+        resHdrNew.set('location', GHPROXY_PATH + redirectUrl.href);
       else {
-        const u = new URL(_location);
-        if (u) {
-          reqInit.redirect = 'follow';
-          return proxy(u, reqInit, originalFilename);
-        }
+        reqInit.redirect = 'follow';
+        return proxy(redirectUrl, reqInit, originalFilename);
       }
     }
   }

@@ -113,6 +113,18 @@ URLs with CORS response headers. Successful file responses force attachment
 downloads and preserve the safely encoded filename from the original GitHub
 URL across CDN redirects.
 
+Public GitHub repositories also support HTTPS `clone`, `fetch`, and `pull`:
+
+```bash
+git clone --depth=1 https://your-proxy.example/api/ghproxy/https://github.com/Craun718/ghproxy-plus.git
+```
+
+Replace `https://your-proxy.example` with your deployment's origin. Git ref
+discovery uses GET; POST is accepted only for `/<owner>/<repo>/git-upload-pack`.
+Git protocol headers and binary request/response bodies are preserved. Push,
+SSH, private-repository authentication, Git LFS, and automatic submodule URL
+rewriting are outside this API's supported scope.
+
 ### Health check
 
 ```text

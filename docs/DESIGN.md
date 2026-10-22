@@ -4,8 +4,8 @@
 
 - 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
   当前 origin 已完成；P16 Safari 真实部署下载路由待实施；P17 Release 页面解析
-  兜底与 P18 Vite 迁移及跨主版本依赖升级已完成
-- 最近更新：2026-10-16
+  兜底、P18 Vite 迁移及跨主版本依赖升级、P19 HTTPS Git 克隆支持已完成；P20 v2.1.0 本地发布准备完成，待手动推送及发布
+- 最近更新：2026-10-23
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -94,7 +94,8 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 
 ### 2.3 非目标
 
-- 不在本轮重写 `/api/ghproxy/` 的代理传输实现。
+- 不在本轮重写 `/api/ghproxy/` 的代理传输实现；P19 仅扩展只读 Git Smart HTTP
+  所需的路由和二进制请求体转发。
 - 不引入账号、收藏、下载历史同步或服务端持久化。
 - GitHub Token 只用于提高 GitHub API 查询额度；本轮不承诺私有仓库浏览能力，
   不保存、同步或代管用户凭据。
@@ -447,6 +448,25 @@ Release 页面解析兜底：
 - 保留上游状态码、`Content-Type`、`Content-Length`、range 与缓存相关 header；除
   `Content-Disposition` 和现有安全/CORS 处理外，不得改写文件内容或下载协议。
 
+### 6.3 HTTPS Git 克隆代理
+
+- 使用 `git clone https://<host>/api/ghproxy/https://github.com/<owner>/<repo>.git`
+  克隆公开 GitHub 仓库；同一 remote 支持后续 `fetch` 与 `pull`。
+- 支持 Git Smart HTTP 的 `GET .../info/refs?service=git-upload-pack` 和
+  `POST .../git-upload-pack`，保留 `Git-Protocol`、Content-Type、查询参数及上游
+  状态码，兼容协议 v0 和 v2、浅克隆与完整克隆。
+- POST 仅允许精确的 GitHub `/<owner>/<repo>/git-upload-pack` 路径。推送所需的
+  `git-receive-pack`（含服务发现）不开放，不新增 SSH、私有仓库认证、Git LFS 或
+  子模块地址自动改写能力；原有文件下载仍只接受 GET/HEAD。
+- POST 请求体按原始二进制读取并转发，不转字符串、不传未等待的 Promise；GET/HEAD
+  不附加请求体。上游响应继续流式返回，Git 协议响应不添加附件下载 header。
+- 上游请求移除代理域名的 Host 及连接专用 header，保留 Git 协议 header。重定向
+  继续使用代理地址，兼容 GitHub 的绝对和相对 Location。
+- README 与 `/docs` 提供克隆示例，`/docs` 使用当前 origin；增加路由、二进制转发、
+  协议 header、非法 POST 和推送拒绝回归。真实验证通过本地 Worker 克隆本项目
+  `Craun718/ghproxy-plus`，克隆命令使用 `--depth=1`。
+- 参考 [Git HTTP 协议](https://git-scm.com/docs/http-protocol)。本次不部署线上环境。
+
 ## 7. 可访问性、响应式与性能
 
 - 所有字段有程序化关联的 label、description 和 error message。
@@ -699,6 +719,30 @@ pnpm build
 - P3：Vite 浏览器启动另有一个未阻断功能的 `/favicon.ico` 404；项目没有 favicon
   资源。后续可单独补充站点图标。
 
+### P19：HTTPS Git 克隆支持（已完成）
+
+- P0：已开放只读 Git Smart HTTP 服务发现与 upload-pack POST，修正二进制请求体和
+  上游 header 转发，保持文件下载及 Git 响应语义。
+- P1：已补充实际路由、协议 v0/v2 header、二进制请求/响应、重定向、只读边界及
+  Git 路径不被误判为附件下载的回归。
+- P2：已同步 README、API 文档和当前 origin 克隆示例，通过类型检查、Biome、
+  109 项单元/组件测试、24 项 E2E、生产构建与 Wrangler dry-run。本地 Worker
+  使用协议 v0、v2 分别对 `Craun718/ghproxy-plus` 执行 `clone --depth=1` 成功，
+  并通过代理完成 `fetch --depth=1`、`pull --ff-only --depth=1` 与 `git fsck`。
+- P3：已同步本文档与 `TODO.md`，纳入 P20 v2.1.0 发布；未推送、未执行真实部署。
+
+### P20：v2.1.0 发布（待手动推送及发布）
+
+- 本次新增只读 HTTPS Git 克隆能力，按次版本升级为 `2.1.0`；保留已同步的
+  v2.0.2 依赖更新与现有文件下载行为。
+- 已更新 `package.json` 为 `2.1.0`，发布说明见 `docs/releases/v2.1.0.md`；
+  typecheck、Biome、109 项单元/组件测试、24 项 E2E、生产构建与 Wrangler dry-run
+  均已通过。本地发布提交与 `v2.1.0` tag 已获用户授权；远端推送和 GitHub
+  Release 尚未执行。
+- P16 Safari 真实部署下载路由仍待实施，不计入本次发布，不宣称线上已修复或部署。
+- 创建提交需用户明确授权；Git 分支及 tag 必须由用户手动推送。远端具备对应
+  提交和 tag 后再发布 GitHub Release，发布不得触发未授权的代码推送或真实部署。
+
 ## 10. 验收定义
 
 重构只有在以下条件全部满足时才算完成：
@@ -805,6 +849,10 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
 - `/api/ghproxy/` 支持成功 GET/HEAD 文件响应的强制附件下载，在多级 CDN 重定向后
   保留初始 GitHub URL 文件名，并输出安全 ASCII `filename` 与 RFC 5987 `filename*`；
   Unicode、非法百分号、路径分隔符、控制字符和 header 注入均有自动化回归覆盖。
+- `/api/ghproxy/` 支持公开 GitHub 仓库的 HTTPS `clone`、`fetch` 和 `pull`，仅为
+  `git-upload-pack` 开放 POST；Git 协议 header 与二进制数据保持原样，Git 响应
+  不添加附件下载 header。协议 v0/v2 的本项目 `--depth=1` 克隆均已在本地 Worker
+  验证；线上部署尚未更新。
 - 首页示例为 `noctisynth/semifold`，顶部导航显示 `API Docs`，浏览器标题为
   `GitHub Proxy Plus`。
 - `src/globals-css.test.ts` 锁定迁移前全部 light/dark OKLCH 值。为满足 WCAG AA，
@@ -814,4 +862,4 @@ Craun718 选择性同步于 2026-08-09 完成。2026-08-10 根据 PR #2 review �
 - 下载结果页与其高级选择器不进入首页初始 JavaScript。
 - 自动化覆盖 320px、390px、768px、1280px、1440px 断点，Token 展开态、桌面和
   移动核心流程、键盘路径、axe，以及 LCP < 2.5s、CLS < 0.1、INP < 200ms 的
-  本地浏览器冒烟预算。当前 Vitest 83/83、Playwright 24/24 通过。
+  本地浏览器冒烟预算。当前 Vitest 109/109、Playwright 24/24 通过。
