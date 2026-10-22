@@ -72,17 +72,31 @@ export function AppFooter() {
             </a>
           </span>
         </div>
-        <p>
-          © {new Date().getFullYear()}{' '}
-          <a
-            href="https://github.com/Craun718/ghproxy-plus"
-            target="_blank"
-            rel="noreferrer"
-            className="underline decoration-border underline-offset-4 hover:text-foreground"
-          >
-            ghproxy plus
-          </a>
-        </p>
+        <div className="flex shrink-0 flex-col gap-1">
+          <p>
+            © {new Date().getFullYear()}{' '}
+            <a
+              href="https://github.com/Craun718/ghproxy-plus"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-border underline-offset-4 hover:text-foreground"
+            >
+              ghproxy plus
+            </a>
+          </p>
+          <p className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
+            <span>v{import.meta.env.VITE_APP_VERSION}</span>
+            <span>
+              Built{' '}
+              <time
+                dateTime={import.meta.env.VITE_BUILD_TIMESTAMP}
+                title={import.meta.env.VITE_BUILD_TIMESTAMP}
+              >
+                {import.meta.env.VITE_BUILD_DATE} UTC
+              </time>
+            </span>
+          </p>
+        </div>
       </div>
     </footer>
   );
