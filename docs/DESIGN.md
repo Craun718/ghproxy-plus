@@ -5,7 +5,7 @@
 - 状态：当前工作区权威方案（Source of Truth）；P15 API 文档 ping 示例动态使用
   当前 origin 已完成；P16 Safari 真实部署下载路由待实施；P17 Release 页面解析
   兜底、P18 Vite 迁移及跨主版本依赖升级、P19 HTTPS Git 克隆支持已完成；P20 v2.1.0 本地发布准备完成，待手动推送及发布；P21 页脚版本号与构建日期、P22 v2.1.1 版本升级已完成
-- 最近更新：2026-10-23
+- 最近更新：2026-11-02
 - 适用范围：前端产品交互、前端架构、前后端数据边界、工程规范与验收标准
 - 配套清单：根目录 `TODO.md`
 
@@ -113,7 +113,8 @@ Hono、Cloudflare Workers 部署形态以及 `/api/ghproxy/` 代理能力继续�
 - UI 体系：shadcn/ui。
 - shadcn/ui 风格：Luma style。
 - shadcn/ui 组件原语：Base UI（`@base-ui/react`），不再以 Radix UI 作为目标原语。
-- 图标：Lucide；仅按实际使用导入。
+- 图标：Lucide；仅按实际使用导入。GitHub 官方品牌语义图标使用内置
+  GitHub Mark SVG，不为此引入品牌图标依赖。
 - 共享数据管理：Zustand。
 - 数据校验：使用 Zod 标准入口 `zod` 与完整 schema API；业务 schema 不使用
   `zod/mini`。依赖升级允许跨主版本；升级后的 Zod 与 Vite 生产 bundle 必须通过
@@ -165,7 +166,7 @@ Luma 和 Base UI 的正式 CLI/schema 生成结果，不手写猜测不受当前
 主页（`/`）按以下顺序组织：
 
 1. 精简 Header：品牌、`API Docs`、指向 `Craun718/ghproxy-plus` 的 GitHub 链接和
-   可选服务状态。
+   可选服务状态；左上角品牌徽标与右上角 GitHub 链接都使用 GitHub Mark 品牌图标。
 2. 任务标题：说明“粘贴仓库地址，获取适合当前设备的 Release 资产”。
 3. 仓库搜索表单：支持仓库 URL、`owner/repo` 和 Release URL。
 4. 空状态、本地校验和可恢复的查询错误；匿名限流时仍在此页自动展开临时 Token 区域。
